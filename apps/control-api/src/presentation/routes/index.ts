@@ -1,7 +1,17 @@
 import type { FastifyInstance } from "fastify";
+import type { Pool } from "pg";
+import type RedisImport from "ioredis";
 
 import { registerHealthRoute } from "./health-route.js";
 
-export function registerRoutes(app: FastifyInstance): void {
-  registerHealthRoute(app);
+type RegisterRoutesDependencies = {
+  pgPool: Pool;
+  redis: InstanceType<typeof RedisImport.default>;
+};
+
+export function registerRoutes(
+  app: FastifyInstance,
+  dependencies: RegisterRoutesDependencies,
+): void {
+  registerHealthRoute(app, dependencies);
 }

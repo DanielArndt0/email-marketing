@@ -2,7 +2,7 @@ import Fastify from "fastify";
 
 import { createLogger, createPgPool, createRedisConnection, env } from "shared";
 
-import { registerHealthRoute } from "../presentation/routes/health-route.js";
+import { registerRoutes } from "../presentation/routes/index.js";
 
 const logger = createLogger({
   serviceName: "control-api",
@@ -15,7 +15,7 @@ const app = Fastify({
   logger: false,
 });
 
-registerHealthRoute(app, {
+registerRoutes(app, {
   pgPool,
   redis,
 });
