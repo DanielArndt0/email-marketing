@@ -1,14 +1,17 @@
 import type { FastifyInstance } from "fastify";
+import type { Pool } from "pg";
+import type RedisImport from "ioredis";
 
-import { env } from "shared";
+import { createGetHealthHandler } from "../../modules/health/http/get-health-handler.js";
 
-export function registerHealthRoute(app: FastifyInstance): void {
-  app.get("/health", async () => {
-    return {
-      status: "ok",
-      service: "control-api",
-      environment: env.NODE_ENV,
-      timestamp: new Date().toISOString(),
-    };
-  });
+type RegisterHealthRouteDependencies = {
+  pgPool: Pool;
+  redis: InstanceType<typeof RedisImport.default>;
+};
+
+export function registerHealthRoute(
+  app: FastifyInstance,
+  dependencies: RegisterHealthRouteDependencies,
+): void {
+  app.get("/health", createGetHealthHandler(dependencies));
 }

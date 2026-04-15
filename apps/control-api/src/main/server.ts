@@ -1,18 +1,55 @@
 import Fastify from "fastify";
 
-import { env, createLogger } from "shared";
+import { createLogger, createPgPool, createRedisConnection, env } from "shared";
 
-import { registerRoutes } from "../presentation/routes/index.js";
+import { registerHealthRoute } from "../presentation/routes/health-route.js";
 
 const logger = createLogger({
   serviceName: "control-api",
 });
 
+const pgPool = createPgPool();
+const redis = createRedisConnection();
+
 const app = Fastify({
   logger: false,
 });
 
-registerRoutes(app);
+registerHealthRoute(app, {
+  pgPool,
+  redis,
+});
+
+async function shutdown(signal: string): Promise<void> {
+  logger.info({ signal }, "iniciando encerramento gracioso da control-api");
+
+  try {
+    await app.close();
+    await pgPool.end();
+    await redis.quit();
+
+    logger.info({ signal }, "control-api encerrada com sucesso");
+    process.exit(0);
+  } catch (error) {
+    logger.error(
+      {
+        err: error,
+        signal,
+      },
+      "falha ao encerrar control-api",
+    );
+
+    process.exit(1);
+  }
+}
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
 
 async function start(): Promise<void> {
   try {
@@ -35,6 +72,9 @@ async function start(): Promise<void> {
       },
       "falha ao iniciar control-api",
     );
+
+    await pgPool.end().catch(() => undefined);
+    await redis.quit().catch(() => undefined);
 
     process.exit(1);
   }
