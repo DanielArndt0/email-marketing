@@ -1,0 +1,32 @@
+{
+  "name": "control-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API HTTP de controle do sistema de e-mail marketing.",
+  "scripts": {
+    "test": "echo \"No tests configured yet\"",
+    "dev": "tsx watch src/main/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "email-marketing",
+    "control-api",
+    "fastify",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "Daniel Arndt <danielarndt959@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5",
+    "pino": "^10.3.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
+}

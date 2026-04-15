@@ -1,0 +1,29 @@
+{
+  "name": "core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pacote interno com domínio, contratos e casos de uso centrais do sistema de e-mail marketing.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests configured yet\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "email-marketing",
+    "core",
+    "domain",
+    "clean-architecture",
+    "typescript"
+  ],
+  "author": "Daniel Arndt <danielarndt959@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
+}

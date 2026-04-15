@@ -1,0 +1,39 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pacote interno com infraestrutura e utilitários compartilhados entre os apps do sistema de e-mail marketing.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests configured yet\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "email-marketing",
+    "shared",
+    "infrastructure",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "Daniel Arndt <danielarndt959@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^5.74.1",
+    "dotenv": "^17.4.2",
+    "ioredis": "^5.10.1",
+    "nodemailer": "^8.0.5",
+    "pg": "^8.20.0",
+    "pino": "^10.3.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0"
+  }
+}
