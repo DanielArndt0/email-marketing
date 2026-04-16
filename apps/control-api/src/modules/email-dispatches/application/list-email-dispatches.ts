@@ -8,7 +8,8 @@ export type ListEmailDispatchesFilters = {
   campaignId?: string | undefined;
   contactId?: string | undefined;
   status?: "pending" | "queued" | "processing" | "sent" | "error" | undefined;
-  limit: number;
+  page: number;
+  pageSize: number;
 };
 
 type RawEmailDispatchListItem = {
@@ -25,6 +26,10 @@ type RawEmailDispatchListItem = {
   sentAt: Date | string | null;
 };
 
+type RawCountRow = {
+  total: string;
+};
+
 export type EmailDispatchListItem = {
   id: string;
   campaignId: string;
@@ -37,6 +42,14 @@ export type EmailDispatchListItem = {
   errorMessage: string | null;
   createdAt: string;
   sentAt: string | null;
+};
+
+export type ListEmailDispatchesResult = {
+  items: EmailDispatchListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 function normalizeDateValue(value: Date | string | null): string | null {
@@ -54,7 +67,7 @@ function normalizeDateValue(value: Date | string | null): string | null {
 export async function listEmailDispatches(
   dependencies: ListEmailDispatchesDependencies,
   filters: ListEmailDispatchesFilters,
-): Promise<EmailDispatchListItem[]> {
+): Promise<ListEmailDispatchesResult> {
   const values: unknown[] = [];
   const conditions: string[] = [];
 
@@ -73,20 +86,34 @@ export async function listEmailDispatches(
     conditions.push(`status = $${values.length}`);
   }
 
-  values.push(filters.limit);
-
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const offset = (filters.page - 1) * filters.pageSize;
+
+  const countResult = await dependencies.pgPool.query<RawCountRow>(
+    `
+      SELECT COUNT(*)::text AS total
+      FROM email_dispatches
+      ${whereClause}
+    `,
+    values,
+  );
+
+  const total = Number(countResult.rows[0]?.total ?? "0");
+  const totalPages = total === 0 ? 0 : Math.ceil(total / filters.pageSize);
+
+  const paginatedValues = [...values, filters.pageSize, offset];
 
   const query = `
     SELECT
       id,
       campaign_id AS "campaignId",
       contact_id AS "contactId",
+      template_id AS "templateId",
       recipient_email AS "recipientEmail",
       subject,
       status,
-      template_id AS "templateId",
       provider_message_id AS "providerMessageId",
       error_message AS "errorMessage",
       created_at AS "createdAt",
@@ -94,25 +121,32 @@ export async function listEmailDispatches(
     FROM email_dispatches
     ${whereClause}
     ORDER BY created_at DESC
-    LIMIT $${values.length}
+    LIMIT $${paginatedValues.length - 1}
+    OFFSET $${paginatedValues.length}
   `;
 
   const result = await dependencies.pgPool.query<RawEmailDispatchListItem>(
     query,
-    values,
+    paginatedValues,
   );
 
-  return result.rows.map((row) => ({
-    id: row.id,
-    campaignId: row.campaignId,
-    contactId: row.contactId,
-    recipientEmail: row.recipientEmail,
-    subject: row.subject,
-    status: row.status,
-    templateId: row.templateId,
-    providerMessageId: row.providerMessageId,
-    errorMessage: row.errorMessage,
-    createdAt: normalizeDateValue(row.createdAt) ?? "",
-    sentAt: normalizeDateValue(row.sentAt),
-  }));
+  return {
+    items: result.rows.map((row) => ({
+      id: row.id,
+      campaignId: row.campaignId,
+      contactId: row.contactId,
+      templateId: row.templateId,
+      recipientEmail: row.recipientEmail,
+      subject: row.subject,
+      status: row.status,
+      providerMessageId: row.providerMessageId,
+      errorMessage: row.errorMessage,
+      createdAt: normalizeDateValue(row.createdAt) ?? "",
+      sentAt: normalizeDateValue(row.sentAt),
+    })),
+    page: filters.page,
+    pageSize: filters.pageSize,
+    total,
+    totalPages,
+  };
 }

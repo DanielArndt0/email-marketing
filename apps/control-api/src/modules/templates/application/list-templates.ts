@@ -5,7 +5,8 @@ type ListTemplatesDependencies = {
 };
 
 export type ListTemplatesFilters = {
-  limit: number;
+  page: number;
+  pageSize: number;
 };
 
 type RawTemplateListItem = {
@@ -18,6 +19,10 @@ type RawTemplateListItem = {
   updatedAt: Date | string;
 };
 
+type RawCountRow = {
+  total: string;
+};
+
 export type TemplateListItem = {
   id: string;
   name: string;
@@ -26,6 +31,14 @@ export type TemplateListItem = {
   textContent: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ListTemplatesResult = {
+  items: TemplateListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 function normalizeDateValue(value: Date | string): string {
@@ -39,7 +52,19 @@ function normalizeDateValue(value: Date | string): string {
 export async function listTemplates(
   dependencies: ListTemplatesDependencies,
   filters: ListTemplatesFilters,
-): Promise<TemplateListItem[]> {
+): Promise<ListTemplatesResult> {
+  const offset = (filters.page - 1) * filters.pageSize;
+
+  const countResult = await dependencies.pgPool.query<RawCountRow>(
+    `
+      SELECT COUNT(*)::text AS total
+      FROM templates
+    `,
+  );
+
+  const total = Number(countResult.rows[0]?.total ?? "0");
+  const totalPages = total === 0 ? 0 : Math.ceil(total / filters.pageSize);
+
   const result = await dependencies.pgPool.query<RawTemplateListItem>(
     `
       SELECT
@@ -53,17 +78,24 @@ export async function listTemplates(
       FROM templates
       ORDER BY created_at DESC
       LIMIT $1
+      OFFSET $2
     `,
-    [filters.limit],
+    [filters.pageSize, offset],
   );
 
-  return result.rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    subject: row.subject,
-    htmlContent: row.htmlContent,
-    textContent: row.textContent,
-    createdAt: normalizeDateValue(row.createdAt),
-    updatedAt: normalizeDateValue(row.updatedAt),
-  }));
+  return {
+    items: result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      subject: row.subject,
+      htmlContent: row.htmlContent,
+      textContent: row.textContent,
+      createdAt: normalizeDateValue(row.createdAt),
+      updatedAt: normalizeDateValue(row.updatedAt),
+    })),
+    page: filters.page,
+    pageSize: filters.pageSize,
+    total,
+    totalPages,
+  };
 }

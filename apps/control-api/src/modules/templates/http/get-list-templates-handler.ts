@@ -5,7 +5,8 @@ import { z } from "zod";
 import { listTemplates } from "../application/list-templates.js";
 
 const requestQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
 });
 
 type CreateGetListTemplatesHandlerDependencies = {
@@ -21,11 +22,11 @@ export function createGetListTemplatesHandler(
   ) {
     const query = requestQuerySchema.parse(request.query);
 
-    const templates = await listTemplates(dependencies, query);
-
-    return reply.status(200).send({
-      items: templates,
-      count: templates.length,
+    const result = await listTemplates(dependencies, {
+      page: query.page,
+      pageSize: query.pageSize,
     });
+
+    return reply.status(200).send(result);
   };
 }

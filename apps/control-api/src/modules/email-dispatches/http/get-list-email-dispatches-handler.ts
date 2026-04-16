@@ -10,7 +10,8 @@ const requestQuerySchema = z.object({
   status: z
     .enum(["pending", "queued", "processing", "sent", "error"])
     .optional(),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
 });
 
 type CreateGetListEmailDispatchesHandlerDependencies = {
@@ -26,16 +27,14 @@ export function createGetListEmailDispatchesHandler(
   ) {
     const query = requestQuerySchema.parse(request.query);
 
-    const dispatches = await listEmailDispatches(dependencies, {
+    const result = await listEmailDispatches(dependencies, {
       campaignId: query.campaignId,
       contactId: query.contactId,
       status: query.status,
-      limit: query.limit,
+      page: query.page,
+      pageSize: query.pageSize,
     });
 
-    return reply.status(200).send({
-      items: dispatches,
-      count: dispatches.length,
-    });
+    return reply.status(200).send(result);
   };
 }
