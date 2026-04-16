@@ -1,11 +1,22 @@
 import type { Worker } from "bullmq";
+import type { Pool } from "pg";
 
 import { createEmailDispatchConsumer } from "./email-dispatch-consumer.js";
 
-export function registerConsumers(): Worker[] {
+type RegisterConsumersDependencies = {
+  pgPool: Pool;
+};
+
+export function registerConsumers(
+  dependencies: RegisterConsumersDependencies,
+): Worker[] {
   const workers: Worker[] = [];
 
-  workers.push(createEmailDispatchConsumer());
+  workers.push(
+    createEmailDispatchConsumer({
+      pgPool: dependencies.pgPool,
+    }),
+  );
 
   return workers;
 }

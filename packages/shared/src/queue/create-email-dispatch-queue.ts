@@ -5,6 +5,7 @@ import { createRedisConnection } from "./create-redis-connection.js";
 export const EMAIL_DISPATCH_QUEUE_NAME = "email-dispatch";
 
 export type EmailDispatchJobData = {
+  dispatchId: string;
   campaignId: string;
   contactId: string;
   to: string;

@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import type { Pool } from "pg";
-import type RedisImport from "ioredis";
 import type { Queue } from "bullmq";
+import type RedisImport from "ioredis";
+import type { Pool } from "pg";
 
 import type { EmailDispatchJobData } from "shared";
 
-import { registerHealthRoute } from "./health-route.js";
 import { registerCampaignsRoute } from "./campaigns-route.js";
+import { registerHealthRoute } from "./health-route.js";
 
 type RegisterRoutesDependencies = {
   pgPool: Pool;
@@ -24,6 +24,7 @@ export function registerRoutes(
   });
 
   registerCampaignsRoute(app, {
+    pgPool: dependencies.pgPool,
     emailDispatchQueue: dependencies.emailDispatchQueue,
   });
 }

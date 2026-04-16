@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Queue } from "bullmq";
+import type { Pool } from "pg";
 import { z } from "zod";
 
 import type { EmailDispatchJobData } from "shared";
@@ -8,12 +9,14 @@ import { enqueueEmailDispatch } from "../application/enqueue-email-dispatch.js";
 
 const requestBodySchema = z.object({
   campaignId: z.string().min(1),
+  campaignName: z.string().min(1),
   contactId: z.string().min(1),
   to: z.email(),
   subject: z.string().min(1),
 });
 
 type CreatePostEnqueueEmailDispatchHandlerDependencies = {
+  pgPool: Pool;
   queue: Queue<EmailDispatchJobData>;
 };
 

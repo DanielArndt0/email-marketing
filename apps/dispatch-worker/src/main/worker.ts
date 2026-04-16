@@ -1,12 +1,14 @@
 import type { Worker } from "bullmq";
 
-import { createLogger, env } from "shared";
+import { createLogger, createPgPool, env } from "shared";
 
 import { registerConsumers } from "../consumers/index.js";
 
 const logger = createLogger({
   serviceName: "dispatch-worker",
 });
+
+const pgPool = createPgPool();
 
 let workers: Worker[] = [];
 
@@ -15,6 +17,7 @@ async function shutdown(signal: string): Promise<void> {
 
   try {
     await Promise.all(workers.map((worker) => worker.close()));
+    await pgPool.end();
 
     logger.info({ signal }, "dispatch-worker encerrado com sucesso");
     process.exit(0);
@@ -41,7 +44,9 @@ process.on("SIGTERM", () => {
 
 async function start(): Promise<void> {
   try {
-    workers = registerConsumers();
+    workers = registerConsumers({
+      pgPool,
+    });
 
     logger.info(
       {
@@ -60,6 +65,7 @@ async function start(): Promise<void> {
       "falha ao iniciar dispatch-worker",
     );
 
+    await pgPool.end().catch(() => undefined);
     process.exit(1);
   }
 }
