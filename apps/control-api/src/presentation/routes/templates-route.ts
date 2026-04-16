@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
+import { createDeleteTemplateHandler } from "../../modules/templates/http/delete-template-handler.js";
 import { createGetListTemplatesHandler } from "../../modules/templates/http/get-list-templates-handler.js";
 import { createGetTemplateByIdHandler } from "../../modules/templates/http/get-template-by-id-handler.js";
 import { createPatchUpdateTemplateHandler } from "../../modules/templates/http/patch-update-template-handler.js";
@@ -38,6 +39,13 @@ export function registerTemplatesRoute(
   app.patch(
     "/templates/:id",
     createPatchUpdateTemplateHandler({
+      pgPool: dependencies.pgPool,
+    }),
+  );
+
+  app.delete(
+    "/templates/:id",
+    createDeleteTemplateHandler({
       pgPool: dependencies.pgPool,
     }),
   );
