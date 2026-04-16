@@ -6,6 +6,7 @@ import type { Pool } from "pg";
 import type { EmailDispatchJobData } from "shared";
 
 import { registerCampaignsRoute } from "./campaigns-route.js";
+import { registerEmailDispatchesRoute } from "./email-dispatches-route.js";
 import { registerHealthRoute } from "./health-route.js";
 
 type RegisterRoutesDependencies = {
@@ -26,5 +27,9 @@ export function registerRoutes(
   registerCampaignsRoute(app, {
     pgPool: dependencies.pgPool,
     emailDispatchQueue: dependencies.emailDispatchQueue,
+  });
+
+  registerEmailDispatchesRoute(app, {
+    pgPool: dependencies.pgPool,
   });
 }
