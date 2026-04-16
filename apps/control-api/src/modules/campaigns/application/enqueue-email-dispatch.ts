@@ -15,18 +15,72 @@ export type EnqueueEmailDispatchInput = {
   campaignName: string;
   contactId: string;
   to: string;
+  templateId?: string | undefined;
+  subject?: string | undefined;
+  htmlContent?: string | undefined;
+  textContent?: string | undefined;
+};
+
+export type EnqueueEmailDispatchResult =
+  | {
+      kind: "template_not_found";
+    }
+  | {
+      kind: "accepted";
+      dispatchId: string;
+      jobId: string | undefined;
+      queueName: string;
+    };
+
+type RawTemplateRow = {
+  id: string;
   subject: string;
+  htmlContent: string | null;
+  textContent: string | null;
 };
 
 export async function enqueueEmailDispatch(
   dependencies: EnqueueEmailDispatchDependencies,
   input: EnqueueEmailDispatchInput,
-) {
+): Promise<EnqueueEmailDispatchResult> {
   const dispatchId = randomUUID();
   const client = await dependencies.pgPool.connect();
 
+  let resolvedSubject = input.subject ?? null;
+  let resolvedHtmlContent = input.htmlContent ?? null;
+  let resolvedTextContent = input.textContent ?? null;
+
   try {
     await client.query("BEGIN");
+
+    if (input.templateId) {
+      const templateResult = await client.query<RawTemplateRow>(
+        `
+          SELECT
+            id,
+            subject,
+            html_content AS "htmlContent",
+            text_content AS "textContent"
+          FROM templates
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [input.templateId],
+      );
+
+      const template = templateResult.rows[0];
+
+      if (!template) {
+        await client.query("ROLLBACK");
+        return {
+          kind: "template_not_found",
+        };
+      }
+
+      resolvedSubject = template.subject;
+      resolvedHtmlContent = template.htmlContent;
+      resolvedTextContent = template.textContent;
+    }
 
     await client.query(
       `
@@ -37,7 +91,7 @@ export async function enqueueEmailDispatch(
           name = EXCLUDED.name,
           subject = EXCLUDED.subject
       `,
-      [input.campaignId, input.campaignName, input.subject],
+      [input.campaignId, input.campaignName, resolvedSubject],
     );
 
     await client.query(
@@ -57,18 +111,24 @@ export async function enqueueEmailDispatch(
           id,
           campaign_id,
           contact_id,
+          template_id,
           recipient_email,
           subject,
+          html_content,
+          text_content,
           status
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
       [
         dispatchId,
         input.campaignId,
         input.contactId,
+        input.templateId ?? null,
         input.to,
-        input.subject,
+        resolvedSubject,
+        resolvedHtmlContent,
+        resolvedTextContent,
         "pending",
       ],
     );
@@ -84,10 +144,6 @@ export async function enqueueEmailDispatch(
   try {
     const job = await dependencies.queue.add("email-dispatch", {
       dispatchId,
-      campaignId: input.campaignId,
-      contactId: input.contactId,
-      to: input.to,
-      subject: input.subject,
     });
 
     await dependencies.pgPool.query(
@@ -100,8 +156,9 @@ export async function enqueueEmailDispatch(
     );
 
     return {
+      kind: "accepted",
       dispatchId,
-      jobId: job.id,
+      jobId: job.id?.toString(),
       queueName: job.queueName,
     };
   } catch (error) {

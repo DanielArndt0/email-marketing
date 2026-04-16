@@ -16,6 +16,16 @@ type CreateEmailDispatchConsumerDependencies = {
   pgPool: Pool;
 };
 
+type RawEmailDispatchRow = {
+  id: string;
+  campaignId: string;
+  contactId: string;
+  recipientEmail: string;
+  subject: string;
+  htmlContent: string | null;
+  textContent: string | null;
+};
+
 export function createEmailDispatchConsumer(
   dependencies: CreateEmailDispatchConsumerDependencies,
 ): Worker<EmailDispatchJobData> {
@@ -29,13 +39,35 @@ export function createEmailDispatchConsumer(
           jobId: job.id,
           queueName: EMAIL_DISPATCH_QUEUE_NAME,
           dispatchId: job.data.dispatchId,
-          campaignId: job.data.campaignId,
-          contactId: job.data.contactId,
-          to: job.data.to,
-          subject: job.data.subject,
         },
         "job de envio de e-mail recebido pelo worker",
       );
+
+      const dispatchResult =
+        await dependencies.pgPool.query<RawEmailDispatchRow>(
+          `
+          SELECT
+            id,
+            campaign_id AS "campaignId",
+            contact_id AS "contactId",
+            recipient_email AS "recipientEmail",
+            subject,
+            html_content AS "htmlContent",
+            text_content AS "textContent"
+          FROM email_dispatches
+          WHERE id = $1
+          LIMIT 1
+        `,
+          [job.data.dispatchId],
+        );
+
+      const dispatch = dispatchResult.rows[0];
+
+      if (!dispatch) {
+        throw new Error(
+          `Email dispatch ${job.data.dispatchId} não encontrado.`,
+        );
+      }
 
       await dependencies.pgPool.query(
         `
@@ -48,16 +80,16 @@ export function createEmailDispatchConsumer(
       );
 
       try {
-        const result = await sendEmail({
-          to: job.data.to,
-          subject: job.data.subject,
-          text: `Envio processado para campaignId=${job.data.campaignId} e contactId=${job.data.contactId}.`,
-          html: `
-            <p>Envio processado com sucesso.</p>
-            <p><strong>Campaign ID:</strong> ${job.data.campaignId}</p>
-            <p><strong>Contact ID:</strong> ${job.data.contactId}</p>
-          `,
-        });
+        const emailInput = {
+          to: dispatch.recipientEmail,
+          subject: dispatch.subject,
+          text:
+            dispatch.textContent ??
+            "Envio processado pelo dispatch-worker sem conteúdo de texto definido.",
+          ...(dispatch.htmlContent ? { html: dispatch.htmlContent } : {}),
+        };
+
+        const result = await sendEmail(emailInput);
 
         await dependencies.pgPool.query(
           `
@@ -76,6 +108,8 @@ export function createEmailDispatchConsumer(
             jobId: job.id,
             queueName: EMAIL_DISPATCH_QUEUE_NAME,
             dispatchId: job.data.dispatchId,
+            campaignId: dispatch.campaignId,
+            contactId: dispatch.contactId,
             messageId: result.messageId,
           },
           "e-mail enviado com sucesso pelo worker",

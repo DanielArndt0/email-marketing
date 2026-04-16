@@ -10,10 +10,6 @@ type RetryEmailDispatchDependencies = {
 
 type RawRetryEmailDispatchRow = {
   id: string;
-  campaignId: string;
-  contactId: string;
-  recipientEmail: string;
-  subject: string;
   status: string;
 };
 
@@ -38,17 +34,13 @@ export async function retryEmailDispatch(
 ): Promise<RetryEmailDispatchResult> {
   const result = await dependencies.pgPool.query<RawRetryEmailDispatchRow>(
     `
-      SELECT
-        id,
-        campaign_id AS "campaignId",
-        contact_id AS "contactId",
-        recipient_email AS "recipientEmail",
-        subject,
-        status
-      FROM email_dispatches
-      WHERE id = $1
-      LIMIT 1
-    `,
+    SELECT
+      id,
+      status
+    FROM email_dispatches
+    WHERE id = $1
+    LIMIT 1
+  `,
     [dispatchId],
   );
 
@@ -69,10 +61,6 @@ export async function retryEmailDispatch(
 
   const job = await dependencies.queue.add("email-dispatch-retry", {
     dispatchId: row.id,
-    campaignId: row.campaignId,
-    contactId: row.contactId,
-    to: row.recipientEmail,
-    subject: row.subject,
   });
 
   await dependencies.pgPool.query(

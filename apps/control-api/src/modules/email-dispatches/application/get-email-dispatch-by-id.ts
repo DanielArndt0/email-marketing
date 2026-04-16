@@ -8,8 +8,11 @@ type RawEmailDispatch = {
   id: string;
   campaignId: string;
   contactId: string;
+  templateId: string | null;
   recipientEmail: string;
   subject: string;
+  htmlContent: string | null;
+  textContent: string | null;
   status: string;
   providerMessageId: string | null;
   errorMessage: string | null;
@@ -21,8 +24,11 @@ export type EmailDispatchDetails = {
   id: string;
   campaignId: string;
   contactId: string;
+  templateId: string | null;
   recipientEmail: string;
   subject: string;
+  htmlContent: string | null;
+  textContent: string | null;
   status: string;
   providerMessageId: string | null;
   errorMessage: string | null;
@@ -55,6 +61,9 @@ export async function getEmailDispatchById(
         recipient_email AS "recipientEmail",
         subject,
         status,
+        template_id AS "templateId",
+        html_content AS "htmlContent",
+        text_content AS "textContent",
         provider_message_id AS "providerMessageId",
         error_message AS "errorMessage",
         created_at AS "createdAt",
@@ -79,6 +88,9 @@ export async function getEmailDispatchById(
     recipientEmail: row.recipientEmail,
     subject: row.subject,
     status: row.status,
+    templateId: row.templateId,
+    htmlContent: row.htmlContent,
+    textContent: row.textContent,
     providerMessageId: row.providerMessageId,
     errorMessage: row.errorMessage,
     createdAt: normalizeDateValue(row.createdAt) ?? "",

@@ -15,6 +15,7 @@ type RawEmailDispatchListItem = {
   id: string;
   campaignId: string;
   contactId: string;
+  templateId: string | null;
   recipientEmail: string;
   subject: string;
   status: string;
@@ -28,6 +29,7 @@ export type EmailDispatchListItem = {
   id: string;
   campaignId: string;
   contactId: string;
+  templateId: string | null;
   recipientEmail: string;
   subject: string;
   status: string;
@@ -84,6 +86,7 @@ export async function listEmailDispatches(
       recipient_email AS "recipientEmail",
       subject,
       status,
+      template_id AS "templateId",
       provider_message_id AS "providerMessageId",
       error_message AS "errorMessage",
       created_at AS "createdAt",
@@ -106,6 +109,7 @@ export async function listEmailDispatches(
     recipientEmail: row.recipientEmail,
     subject: row.subject,
     status: row.status,
+    templateId: row.templateId,
     providerMessageId: row.providerMessageId,
     errorMessage: row.errorMessage,
     createdAt: normalizeDateValue(row.createdAt) ?? "",
