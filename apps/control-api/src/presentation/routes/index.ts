@@ -31,5 +31,6 @@ export function registerRoutes(
 
   registerEmailDispatchesRoute(app, {
     pgPool: dependencies.pgPool,
+    emailDispatchQueue: dependencies.emailDispatchQueue,
   });
 }
