@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 
 import { createGetListTemplatesHandler } from "../../modules/templates/http/get-list-templates-handler.js";
 import { createGetTemplateByIdHandler } from "../../modules/templates/http/get-template-by-id-handler.js";
+import { createPatchUpdateTemplateHandler } from "../../modules/templates/http/patch-update-template-handler.js";
 import { createPostCreateTemplateHandler } from "../../modules/templates/http/post-create-template-handler.js";
 
 type RegisterTemplatesRouteDependencies = {
@@ -30,6 +31,13 @@ export function registerTemplatesRoute(
   app.get(
     "/templates/:id",
     createGetTemplateByIdHandler({
+      pgPool: dependencies.pgPool,
+    }),
+  );
+
+  app.patch(
+    "/templates/:id",
+    createPatchUpdateTemplateHandler({
       pgPool: dependencies.pgPool,
     }),
   );
