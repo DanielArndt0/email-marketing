@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 
-import { createLogger, createRedisConnection } from "shared";
+import { createLogger, createRedisConnection, sendEmail } from "shared";
 
 import {
   EMAIL_DISPATCH_QUEUE_NAME,
@@ -28,10 +28,30 @@ export function createEmailDispatchConsumer(): Worker<EmailDispatchJobData> {
         },
         "job de envio de e-mail recebido pelo worker",
       );
-      // Futuramente, entraremos com a orquestração real
-      // de envio de e-mail via SMTP/Nodemailer.
+
+      const result = await sendEmail({
+        to: job.data.to,
+        subject: job.data.subject,
+        text: `Envio processado para campaignId=${job.data.campaignId} e contactId=${job.data.contactId}.`,
+        html: `
+          <p>Envio processado com sucesso.</p>
+          <p><strong>Campaign ID:</strong> ${job.data.campaignId}</p>
+          <p><strong>Contact ID:</strong> ${job.data.contactId}</p>
+        `,
+      });
+
+      logger.info(
+        {
+          jobId: job.id,
+          queueName: EMAIL_DISPATCH_QUEUE_NAME,
+          messageId: result.messageId,
+        },
+        "e-mail enviado com sucesso pelo worker",
+      );
+
       return {
         processed: true,
+        messageId: result.messageId,
       };
     },
     {
