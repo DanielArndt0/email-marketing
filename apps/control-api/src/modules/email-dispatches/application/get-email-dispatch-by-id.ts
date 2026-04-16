@@ -9,6 +9,7 @@ type RawEmailDispatch = {
   campaignId: string;
   contactId: string;
   templateId: string | null;
+  templateVariables: Record<string, string>;
   recipientEmail: string;
   subject: string;
   htmlContent: string | null;
@@ -25,6 +26,7 @@ export type EmailDispatchDetails = {
   campaignId: string;
   contactId: string;
   templateId: string | null;
+  templateVariables: Record<string, string>;
   recipientEmail: string;
   subject: string;
   htmlContent: string | null;
@@ -62,6 +64,7 @@ export async function getEmailDispatchById(
         subject,
         status,
         template_id AS "templateId",
+        template_variables AS "templateVariables",
         html_content AS "htmlContent",
         text_content AS "textContent",
         provider_message_id AS "providerMessageId",
@@ -89,6 +92,7 @@ export async function getEmailDispatchById(
     subject: row.subject,
     status: row.status,
     templateId: row.templateId,
+    templateVariables: row.templateVariables,
     htmlContent: row.htmlContent,
     textContent: row.textContent,
     providerMessageId: row.providerMessageId,

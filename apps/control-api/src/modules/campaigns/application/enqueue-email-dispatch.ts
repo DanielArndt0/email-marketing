@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
-import type { EmailDispatchJobData } from "shared";
+import {
+  renderTemplate,
+  type EmailDispatchJobData,
+  type TemplateVariables,
+} from "shared";
 
 type EnqueueEmailDispatchDependencies = {
   pgPool: Pool;
@@ -16,6 +20,7 @@ export type EnqueueEmailDispatchInput = {
   contactId: string;
   to: string;
   templateId?: string | undefined;
+  templateVariables?: TemplateVariables | undefined;
   subject?: string | undefined;
   htmlContent?: string | undefined;
   textContent?: string | undefined;
@@ -45,6 +50,8 @@ export async function enqueueEmailDispatch(
 ): Promise<EnqueueEmailDispatchResult> {
   const dispatchId = randomUUID();
   const client = await dependencies.pgPool.connect();
+
+  const templateVariables = input.templateVariables ?? {};
 
   let resolvedSubject = input.subject ?? null;
   let resolvedHtmlContent = input.htmlContent ?? null;
@@ -77,9 +84,13 @@ export async function enqueueEmailDispatch(
         };
       }
 
-      resolvedSubject = template.subject;
-      resolvedHtmlContent = template.htmlContent;
-      resolvedTextContent = template.textContent;
+      resolvedSubject = renderTemplate(template.subject, templateVariables);
+      resolvedHtmlContent = template.htmlContent
+        ? renderTemplate(template.htmlContent, templateVariables)
+        : null;
+      resolvedTextContent = template.textContent
+        ? renderTemplate(template.textContent, templateVariables)
+        : null;
     }
 
     await client.query(
@@ -112,19 +123,21 @@ export async function enqueueEmailDispatch(
           campaign_id,
           contact_id,
           template_id,
+          template_variables,
           recipient_email,
           subject,
           html_content,
           text_content,
           status
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
       `,
       [
         dispatchId,
         input.campaignId,
         input.contactId,
         input.templateId ?? null,
+        JSON.stringify(templateVariables),
         input.to,
         resolvedSubject,
         resolvedHtmlContent,

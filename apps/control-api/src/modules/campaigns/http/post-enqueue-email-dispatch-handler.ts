@@ -14,6 +14,7 @@ const requestBodySchema = z
     contactId: z.string().min(1),
     to: z.email(),
     templateId: z.string().min(1).optional(),
+    templateVariables: z.record(z.string(), z.string()).optional(),
     subject: z.string().min(1).optional(),
     htmlContent: z.string().min(1).optional(),
     textContent: z.string().min(1).optional(),
