@@ -1,6 +1,12 @@
 import Fastify from "fastify";
 
-import { createLogger, createPgPool, createRedisConnection, env } from "shared";
+import {
+  createEmailDispatchQueue,
+  createLogger,
+  createPgPool,
+  createRedisConnection,
+  env,
+} from "shared";
 
 import { registerRoutes } from "../presentation/routes/index.js";
 
@@ -10,6 +16,7 @@ const logger = createLogger({
 
 const pgPool = createPgPool();
 const redis = createRedisConnection();
+const emailDispatchQueue = createEmailDispatchQueue();
 
 const app = Fastify({
   logger: false,
@@ -18,13 +25,14 @@ const app = Fastify({
 registerRoutes(app, {
   pgPool,
   redis,
+  emailDispatchQueue,
 });
-
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "iniciando encerramento gracioso da control-api");
 
   try {
     await app.close();
+    await emailDispatchQueue.close();
     await pgPool.end();
     await redis.quit();
 
@@ -73,6 +81,7 @@ async function start(): Promise<void> {
       "falha ao iniciar control-api",
     );
 
+    await emailDispatchQueue.close().catch(() => undefined);
     await pgPool.end().catch(() => undefined);
     await redis.quit().catch(() => undefined);
 
