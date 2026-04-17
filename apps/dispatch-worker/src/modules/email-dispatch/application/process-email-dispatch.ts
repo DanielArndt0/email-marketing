@@ -27,7 +27,10 @@ export async function processEmailDispatch(
   dependencies: ProcessEmailDispatchDependencies,
   input: ProcessEmailDispatchInput,
 ): Promise<ProcessEmailDispatchResult> {
-  const dispatch = await findEmailDispatchById(dependencies.pgPool, input.dispatchId);
+  const dispatch = await findEmailDispatchById(
+    dependencies.pgPool,
+    input.dispatchId,
+  );
 
   if (!dispatch) {
     throw new Error(`Email dispatch ${input.dispatchId} não encontrado.`);
