@@ -4,10 +4,20 @@ import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
 import {
+  EMAIL_DISPATCH_ENQUEUE_JOB_NAME,
   renderTemplate,
   type EmailDispatchJobData,
   type TemplateVariables,
 } from "shared";
+
+import {
+  findTemplateForDispatch,
+  insertEmailDispatch,
+  markEmailDispatchError,
+  markEmailDispatchQueued,
+  upsertCampaign,
+  upsertContact,
+} from "../repositories/email-dispatch-command-repository.js";
 
 type EnqueueEmailDispatchDependencies = {
   pgPool: Pool;
@@ -37,13 +47,6 @@ export type EnqueueEmailDispatchResult =
       queueName: string;
     };
 
-type RawTemplateRow = {
-  id: string;
-  subject: string;
-  htmlContent: string | null;
-  textContent: string | null;
-};
-
 export async function enqueueEmailDispatch(
   dependencies: EnqueueEmailDispatchDependencies,
   input: EnqueueEmailDispatchInput,
@@ -61,21 +64,7 @@ export async function enqueueEmailDispatch(
     await client.query("BEGIN");
 
     if (input.templateId) {
-      const templateResult = await client.query<RawTemplateRow>(
-        `
-          SELECT
-            id,
-            subject,
-            html_content AS "htmlContent",
-            text_content AS "textContent"
-          FROM templates
-          WHERE id = $1
-          LIMIT 1
-        `,
-        [input.templateId],
-      );
-
-      const template = templateResult.rows[0];
+      const template = await findTemplateForDispatch(client, input.templateId);
 
       if (!template) {
         await client.query("ROLLBACK");
@@ -93,58 +82,29 @@ export async function enqueueEmailDispatch(
         : null;
     }
 
-    await client.query(
-      `
-        INSERT INTO campaigns (id, name, subject)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (id)
-        DO UPDATE SET
-          name = EXCLUDED.name,
-          subject = EXCLUDED.subject
-      `,
-      [input.campaignId, input.campaignName, resolvedSubject],
-    );
+    await upsertCampaign(client, {
+      id: input.campaignId,
+      name: input.campaignName,
+      subject: resolvedSubject,
+    });
 
-    await client.query(
-      `
-        INSERT INTO contacts (id, email)
-        VALUES ($1, $2)
-        ON CONFLICT (id)
-        DO UPDATE SET
-          email = EXCLUDED.email
-      `,
-      [input.contactId, input.to],
-    );
+    await upsertContact(client, {
+      id: input.contactId,
+      email: input.to,
+    });
 
-    await client.query(
-      `
-        INSERT INTO email_dispatches (
-          id,
-          campaign_id,
-          contact_id,
-          template_id,
-          template_variables,
-          recipient_email,
-          subject,
-          html_content,
-          text_content,
-          status
-        )
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
-      `,
-      [
-        dispatchId,
-        input.campaignId,
-        input.contactId,
-        input.templateId ?? null,
-        JSON.stringify(templateVariables),
-        input.to,
-        resolvedSubject,
-        resolvedHtmlContent,
-        resolvedTextContent,
-        "pending",
-      ],
-    );
+    await insertEmailDispatch(client, {
+      id: dispatchId,
+      campaignId: input.campaignId,
+      contactId: input.contactId,
+      templateId: input.templateId ?? null,
+      templateVariables: JSON.stringify(templateVariables),
+      recipientEmail: input.to,
+      subject: resolvedSubject,
+      htmlContent: resolvedHtmlContent,
+      textContent: resolvedTextContent,
+      status: "pending",
+    });
 
     await client.query("COMMIT");
   } catch (error) {
@@ -155,18 +115,11 @@ export async function enqueueEmailDispatch(
   }
 
   try {
-    const job = await dependencies.queue.add("email-dispatch", {
+    const job = await dependencies.queue.add(EMAIL_DISPATCH_ENQUEUE_JOB_NAME, {
       dispatchId,
     });
 
-    await dependencies.pgPool.query(
-      `
-        UPDATE email_dispatches
-        SET status = $2
-        WHERE id = $1
-      `,
-      [dispatchId, "queued"],
-    );
+    await markEmailDispatchQueued(dependencies.pgPool, dispatchId);
 
     return {
       kind: "accepted",
@@ -178,15 +131,10 @@ export async function enqueueEmailDispatch(
     const errorMessage =
       error instanceof Error ? error.message : "Erro ao enfileirar job";
 
-    await dependencies.pgPool.query(
-      `
-        UPDATE email_dispatches
-        SET status = $2,
-            error_message = $3
-        WHERE id = $1
-      `,
-      [dispatchId, "error", errorMessage],
-    );
+    await markEmailDispatchError(dependencies.pgPool, {
+      dispatchId,
+      errorMessage,
+    });
 
     throw error;
   }

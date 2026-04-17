@@ -1,42 +1,42 @@
-# Visão Geral da Arquitetura
+# Visão geral da arquitetura
 
-O sistema será construído em monorepo, com separação entre:
+## Estratégia adotada
 
-- aplicações executáveis
-- domínio e aplicação
-- infraestrutura compartilhada
+O sistema foi estruturado como monorepo com separação entre:
 
-## Estrutura principal
+- apps executáveis;
+- infraestrutura compartilhada;
+- documentação;
+- scripts de suporte.
 
-- `apps/control-api`
-- `apps/dispatch-worker`
-- `packages/core`
-- `packages/shared`
+## Fluxo principal atual
 
-## Direção arquitetural
+1. A API recebe uma requisição.
+2. O módulo HTTP valida a entrada com Zod.
+3. O caso de uso coordena a operação.
+4. O acesso ao banco ocorre via `repositories/`.
+5. O dispatch é persistido.
+6. Um job é publicado na fila.
+7. O worker consome o job.
+8. O worker envia o e-mail e atualiza o status.
 
-### Camada de entrada
+## Convenção aplicada na API
 
-Responsável por HTTP e entrada externa.
+Dentro de cada módulo da `control-api`, a estrutura alvo é:
 
-### Camada de aplicação
+- `application/`
+- `http/`
+- `repositories/`
 
-Responsável por casos de uso e orquestração de regras.
+## Objetivo dessa convenção
 
-### Camada de domínio
+- separar fluxo de negócio de acesso a dados;
+- facilitar leitura;
+- reduzir arquivos com muitas responsabilidades;
+- criar uma base melhor para evolução do domínio.
 
-Responsável por entidades, objetos de valor e regras centrais.
+## Leitura complementar
 
-### Camada de infraestrutura
-
-Responsável por banco, fila, e-mail, configuração e logging.
-
-## Tecnologias previstas
-
-- Node.js
-- TypeScript
-- PostgreSQL
-- Redis
-- BullMQ
-- Nodemailer
-- SMTP
+- [Estado atual da arquitetura](./current-state.md)
+- [Diretrizes de refatoração](./refactoring-guidelines.md)
+- [Próximos passos](../roadmap/next-steps.md)

@@ -1,21 +1,31 @@
-# API de controle
+# Control API
 
-A `control-api` é a aplicação HTTP responsável pelo controle operacional do sistema de e-mail marketing.
+## Papel
 
-## Responsabilidades esperadas
+A `control-api` é a porta de entrada HTTP do sistema.
 
-- receber requisições da camada externa
-- expor endpoints HTTP
-- validar entrada de dados
-- acionar casos de uso da aplicação
-- consultar status de campanhas, listas, templates e contatos
+## Responsabilidades atuais
 
-## Exemplos de responsabilidades futuras
+- validar entrada de dados;
+- orquestrar casos de uso;
+- persistir dados via camada de repositório;
+- enfileirar dispatches;
+- expor consultas operacionais.
 
-- criar campanha
-- listar campanhas
-- cadastrar contatos
-- criar listas
-- vincular contatos a listas
-- criar templates
-- consultar status de processamento
+## Estrutura interna
+
+- `main/`: bootstrap;
+- `presentation/`: rotas HTTP;
+- `modules/`: módulos funcionais.
+
+## Regra atual de organização
+
+Cada módulo da API deve, sempre que possível, seguir esta divisão:
+
+- `application/`
+- `http/`
+- `repositories/`
+
+## Observação
+
+A camada `application` não deve concentrar SQL bruto.

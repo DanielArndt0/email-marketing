@@ -1,0 +1,26 @@
+{
+  "api": {
+    "pagination": {
+      "templates": {
+        "defaultPage": 1,
+        "defaultPageSize": 20,
+        "maxPageSize": 100
+      },
+      "emailDispatches": {
+        "defaultPage": 1,
+        "defaultPageSize": 20,
+        "maxPageSize": 100
+      }
+    }
+  },
+  "queues": {
+    "emailDispatch": {
+      "name": "email-dispatch",
+      "enqueueJobName": "email-dispatch",
+      "retryJobName": "email-dispatch-retry"
+    }
+  },
+  "mail": {
+    "fallbackText": "Envio processado pelo dispatch-worker sem conteúdo de texto definido."
+  }
+}

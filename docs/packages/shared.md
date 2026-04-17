@@ -1,15 +1,20 @@
 # Package Shared
 
-## O que é
+## Papel
 
-O pacote `shared` concentra componentes técnicos compartilhados entre os apps.
+O `shared` concentra a infraestrutura comum reutilizada por mais de um app.
 
-## Responsabilidades esperadas
+## Conteúdo atual
 
-- configuração
-- logger
-- conexão com PostgreSQL
-- conexão com Redis
-- integração com BullMQ
-- integração com SMTP/Nodemailer
-- utilitários compartilhados de infraestrutura
+- configuração de ambiente;
+- logger;
+- conexão com PostgreSQL;
+- conexão com Redis;
+- fila BullMQ;
+- SMTP/Nodemailer;
+- renderização simples de templates;
+- runner de migrations.
+
+## Diretriz
+
+Tudo o que for infraestrutura comum e não pertencer a um único app deve ser avaliado primeiro para viver em `shared`.

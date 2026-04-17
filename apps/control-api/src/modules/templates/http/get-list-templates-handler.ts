@@ -2,11 +2,24 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 
+import { systemConfig } from "shared";
+
 import { listTemplates } from "../application/list-templates.js";
 
+const paginationConfig = systemConfig.api.pagination.templates;
+
 const requestQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(20),
+  page: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(paginationConfig.defaultPage),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(paginationConfig.maxPageSize)
+    .default(paginationConfig.defaultPageSize),
 });
 
 type CreateGetListTemplatesHandlerDependencies = {

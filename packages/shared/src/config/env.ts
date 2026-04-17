@@ -1,31 +1,13 @@
-import { existsSync } from "node:fs";
-import { dirname, join, parse } from "node:path";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
 import { z } from "zod";
 
+import { findUp } from "./find-up.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-function findUp(filename: string, startDir: string): string | null {
-  let currentDir = startDir;
-  const { root } = parse(currentDir);
-
-  while (true) {
-    const candidate = join(currentDir, filename);
-
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-
-    if (currentDir === root) {
-      return null;
-    }
-
-    currentDir = dirname(currentDir);
-  }
-}
 
 function loadEnvironment(): void {
   const explicitEnvPath = process.env.ENV_FILE_PATH;

@@ -1,6 +1,11 @@
 import type { Pool } from "pg";
 import type RedisImport from "ioredis";
 
+import {
+  pingPostgres,
+  pingRedis,
+} from "../repositories/health-check-repository.js";
+
 type CheckHealthDependencies = {
   pgPool: Pool;
   redis: InstanceType<typeof RedisImport.default>;
@@ -42,7 +47,7 @@ export async function checkHealth(
   };
 
   try {
-    await dependencies.pgPool.query("SELECT 1");
+    await pingPostgres(dependencies);
   } catch (error) {
     result.status = "error";
     result.checks.postgres = {
@@ -55,7 +60,7 @@ export async function checkHealth(
   }
 
   try {
-    const pong = await dependencies.redis.ping();
+    const pong = await pingRedis(dependencies);
 
     if (pong !== "PONG") {
       result.status = "error";

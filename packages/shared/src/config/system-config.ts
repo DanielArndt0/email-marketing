@@ -1,0 +1,55 @@
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+
+import { z } from "zod";
+
+import { findUp } from "./find-up.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const paginationSchema = z.object({
+  defaultPage: z.number().int().positive(),
+  defaultPageSize: z.number().int().positive(),
+  maxPageSize: z.number().int().positive(),
+});
+
+const systemConfigSchema = z.object({
+  api: z.object({
+    pagination: z.object({
+      templates: paginationSchema,
+      emailDispatches: paginationSchema,
+    }),
+  }),
+  queues: z.object({
+    emailDispatch: z.object({
+      name: z.string().min(1),
+      enqueueJobName: z.string().min(1),
+      retryJobName: z.string().min(1),
+    }),
+  }),
+  mail: z.object({
+    fallbackText: z.string().min(1),
+  }),
+});
+
+function loadSystemConfig() {
+  const configPath =
+    findUp("config/system.config.json", process.cwd()) ??
+    findUp("config/system.config.json", __dirname);
+
+  if (!configPath) {
+    throw new Error(
+      "Não foi possível localizar o arquivo config/system.config.json.",
+    );
+  }
+
+  const fileContents = readFileSync(configPath, "utf-8");
+  const parsedConfig = JSON.parse(fileContents);
+
+  return systemConfigSchema.parse(parsedConfig);
+}
+
+export const systemConfig = loadSystemConfig();
+export type SystemConfig = typeof systemConfig;

@@ -1,24 +1,10 @@
 import type { Pool } from "pg";
 
+import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
+import { findEmailDispatchById } from "../repositories/email-dispatch-repository.js";
+
 type GetEmailDispatchByIdDependencies = {
   pgPool: Pool;
-};
-
-type RawEmailDispatch = {
-  id: string;
-  campaignId: string;
-  contactId: string;
-  templateId: string | null;
-  templateVariables: Record<string, string>;
-  recipientEmail: string;
-  subject: string;
-  htmlContent: string | null;
-  textContent: string | null;
-  status: string;
-  providerMessageId: string | null;
-  errorMessage: string | null;
-  createdAt: Date | string;
-  sentAt: Date | string | null;
 };
 
 export type EmailDispatchDetails = {
@@ -38,47 +24,11 @@ export type EmailDispatchDetails = {
   sentAt: string | null;
 };
 
-function normalizeDateValue(value: Date | string | null): string | null {
-  if (value === null) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  return String(value);
-}
-
 export async function getEmailDispatchById(
   dependencies: GetEmailDispatchByIdDependencies,
   id: string,
 ): Promise<EmailDispatchDetails | null> {
-  const result = await dependencies.pgPool.query<RawEmailDispatch>(
-    `
-      SELECT
-        id,
-        campaign_id AS "campaignId",
-        contact_id AS "contactId",
-        recipient_email AS "recipientEmail",
-        subject,
-        status,
-        template_id AS "templateId",
-        template_variables AS "templateVariables",
-        html_content AS "htmlContent",
-        text_content AS "textContent",
-        provider_message_id AS "providerMessageId",
-        error_message AS "errorMessage",
-        created_at AS "createdAt",
-        sent_at AS "sentAt"
-      FROM email_dispatches
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [id],
-  );
-
-  const row = result.rows[0];
+  const row = await findEmailDispatchById(dependencies.pgPool, id);
 
   if (!row) {
     return null;
@@ -88,13 +38,13 @@ export async function getEmailDispatchById(
     id: row.id,
     campaignId: row.campaignId,
     contactId: row.contactId,
-    recipientEmail: row.recipientEmail,
-    subject: row.subject,
-    status: row.status,
     templateId: row.templateId,
     templateVariables: row.templateVariables,
+    recipientEmail: row.recipientEmail,
+    subject: row.subject,
     htmlContent: row.htmlContent,
     textContent: row.textContent,
+    status: row.status,
     providerMessageId: row.providerMessageId,
     errorMessage: row.errorMessage,
     createdAt: normalizeDateValue(row.createdAt) ?? "",

@@ -1,29 +1,23 @@
 # Email Marketing
 
-Sistema de e-mail marketing em Node.js + TypeScript, estruturado em monorepo, com foco em arquitetura limpa, domínio bem separado, processamento assíncrono e evolução incremental.
+Aplicação de e-mail marketing organizada em monorepo, com API HTTP, worker assíncrono, persistência em PostgreSQL, fila com Redis/BullMQ e envio SMTP.
 
 ## Objetivo
 
-Este projeto tem como objetivo servir como base para um sistema de e-mail marketing operado localmente, com suporte a:
-
-- gerenciamento de campanhas
-- gerenciamento de contatos e listas
-- templates de e-mail
-- processamento assíncrono de envios
-- integração com PostgreSQL, Redis, BullMQ e SMTP
+Este projeto serve como base para um sistema de gerenciamento de campanhas e dispatches de e-mail, com foco em evolução incremental e clareza arquitetural.
 
 ## Estrutura do monorepo
 
 - `apps/control-api`: API HTTP de controle do sistema
 - `apps/dispatch-worker`: worker responsável pelo processamento assíncrono
-- `packages/core`: domínio e casos de uso
+- `packages/core`: núcleo de domínio em amadurecimento
 - `packages/shared`: infraestrutura e utilitários compartilhados
 - `docs`: documentação do projeto
 
 ## Documentação
 
-A documentação do projeto se encontra na pasta [`/docs`](./docs/README.md).
+A documentação do projeto está em [`docs/README.md`](./docs/README.md).
 
-## Status
+## Observação
 
-Projeto em fase inicial de estruturação.
+O projeto ainda está em evolução arquitetural. Parte do trabalho atual está focada em organizar melhor a separação entre camada de aplicação, camada HTTP e camada de repositório.

@@ -1,23 +1,19 @@
 # Package Core
 
-O pacote `core` concentra o núcleo da aplicação.
+## Situação atual
 
-## Responsabilidades esperadas
+O `core` ainda está em fase inicial e subutilizado.
 
-- entidades de domínio
-- value objects
-- regras de negócio
-- contratos internos
-- casos de uso da aplicação
-- portas/interfaces para abstrações
+## Papel esperado
 
-## Objetivo
+Este pacote deve concentrar, ao longo da evolução do projeto:
 
-Manter o coração do sistema desacoplado de:
+- entidades de domínio;
+- value objects;
+- contratos mais puros;
+- regras de negócio independentes de framework;
+- tipos mais estáveis entre API e worker.
 
-- Fastify
-- PostgreSQL
-- Redis
-- BullMQ
-- Nodemailer
-- SMTP
+## Observação
+
+Hoje parte da lógica ainda vive nos apps. O objetivo futuro é deslocar o que for domínio real para o `core`.

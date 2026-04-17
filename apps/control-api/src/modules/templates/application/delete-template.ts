@@ -1,11 +1,13 @@
 import type { Pool } from "pg";
 
+import {
+  countTemplateDispatchLinks,
+  deleteTemplateById,
+  findTemplateById,
+} from "../repositories/template-repository.js";
+
 type DeleteTemplateDependencies = {
   pgPool: Pool;
-};
-
-type TemplateUsageRow = {
-  count: string;
 };
 
 export type DeleteTemplateResult =
@@ -25,17 +27,7 @@ export async function deleteTemplate(
   dependencies: DeleteTemplateDependencies,
   id: string,
 ): Promise<DeleteTemplateResult> {
-  const templateResult = await dependencies.pgPool.query<{ id: string }>(
-    `
-      SELECT id
-      FROM templates
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [id],
-  );
-
-  const template = templateResult.rows[0];
+  const template = await findTemplateById(dependencies.pgPool, id);
 
   if (!template) {
     return {
@@ -43,16 +35,10 @@ export async function deleteTemplate(
     };
   }
 
-  const usageResult = await dependencies.pgPool.query<TemplateUsageRow>(
-    `
-      SELECT COUNT(*)::text AS count
-      FROM email_dispatches
-      WHERE template_id = $1
-    `,
-    [id],
+  const dispatchesCount = await countTemplateDispatchLinks(
+    dependencies.pgPool,
+    id,
   );
-
-  const dispatchesCount = Number(usageResult.rows[0]?.count ?? "0");
 
   if (dispatchesCount > 0) {
     return {
@@ -61,13 +47,7 @@ export async function deleteTemplate(
     };
   }
 
-  await dependencies.pgPool.query(
-    `
-      DELETE FROM templates
-      WHERE id = $1
-    `,
-    [id],
-  );
+  await deleteTemplateById(dependencies.pgPool, id);
 
   return {
     kind: "deleted",

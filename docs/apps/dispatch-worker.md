@@ -1,19 +1,22 @@
 # Dispatch Worker
 
-O `dispatch-worker` é a aplicação responsável por consumir filas e processar tarefas assíncronas do sistema.
+## Papel
 
-## Responsabilidades esperadas
+O `dispatch-worker` processa jobs assíncronos do sistema.
 
-- consumir jobs do BullMQ
-- processar envios de e-mail
-- controlar retries
-- registrar falhas operacionais
-- executar fluxos assíncronos desacoplados da API
+## Responsabilidades atuais
 
-## Exemplos de responsabilidades futuras
+- consumir a fila `email-dispatch`;
+- carregar o dispatch persistido;
+- enviar e-mail via SMTP;
+- atualizar status no PostgreSQL.
 
-- enviar lote de campanha
-- processar job de envio individual
-- atualizar status de execução
-- lidar com retentativas
-- aplicar limites operacionais
+## Estrutura interna
+
+- `main/`: bootstrap do processo;
+- `consumers/`: consumers BullMQ;
+- `jobs/`: contratos dos jobs.
+
+## Observação
+
+O worker deve permanecer o mais simples possível. O conteúdo final do envio deve ser resolvido antes do enfileiramento, preferencialmente na API.
