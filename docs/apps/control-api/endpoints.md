@@ -55,6 +55,69 @@ GET /health
 
 ---
 
+## Campaigns
+
+### `POST /campaigns`
+
+Cria uma campanha em estado inicial, com template opcional e definição básica de audiência.
+
+#### Body
+
+```json
+{
+  "name": "Campanha B2B Sul",
+  "goal": "Apresentar oferta inicial",
+  "status": "draft",
+  "templateId": null,
+  "subject": "Assunto base da campanha",
+  "audience": {
+    "sourceType": "cnpj-api",
+    "filters": {
+      "state": "PR",
+      "city": "Londrina",
+      "mainCnaeCode": "6821801"
+    }
+  },
+  "scheduleAt": null
+}
+```
+
+### `GET /campaigns`
+
+Lista campanhas com paginação e filtros básicos.
+
+#### Query params
+
+- `page`: opcional
+- `pageSize`: opcional
+- `status`: opcional
+- `sourceType`: opcional
+
+### `GET /campaigns/:id`
+
+Consulta uma campanha específica por ID.
+
+### `PATCH /campaigns/:id`
+
+Atualiza parcialmente uma campanha.
+
+#### Exemplo de body
+
+```json
+{
+  "status": "ready",
+  "templateId": "ID_DO_TEMPLATE",
+  "audience": {
+    "sourceType": "cnpj-api",
+    "filters": {
+      "state": "SC"
+    }
+  }
+}
+```
+
+---
+
 ## Email Dispatches
 
 ### `POST /campaigns/email-dispatch`

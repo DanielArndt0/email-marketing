@@ -12,10 +12,10 @@ Este roadmap organiza a evolução do sistema em trilhas.
 
 ## Trilha 2 — Produto
 
-- módulo de contatos
-- módulo de listas
-- campanhas com segmentação real
-- agendamento de campanhas
+- módulo de campaigns mais completo, com execution e scheduling
+- módulo de audiences com origem e filtros
+- contratos de lead sources integráveis (CNPJ API, CSV, manual, conectores futuros)
+- snapshots de destinatários por execução
 - métricas básicas de envio
 - variáveis mais ricas de template
 

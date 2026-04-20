@@ -20,6 +20,7 @@ const systemConfigSchema = z.object({
     pagination: z.object({
       templates: paginationSchema,
       emailDispatches: paginationSchema,
+      campaigns: paginationSchema,
     }),
   }),
   queues: z.object({

@@ -75,7 +75,14 @@ Responsável por validar disponibilidade de PostgreSQL e Redis.
 
 ### Campaigns
 
-Responsável por criar o dispatch, persistir conteúdo final e enfileirar o job.
+Responsável pelo gerenciamento inicial de campanhas, incluindo:
+
+- criação e consulta de campanhas;
+- atualização parcial de campanhas;
+- associação de template;
+- definição de audiência por origem e filtros;
+- persistência de dados operacionais básicos da campanha;
+- enfileiramento de dispatches para execução assíncrona.
 
 ### Email Dispatches
 
