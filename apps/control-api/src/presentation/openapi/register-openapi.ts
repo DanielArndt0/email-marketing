@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 
+import packageJson from "../../../package.json" with { type: "json" };
+
 import { env } from "shared";
 
 export async function registerOpenApi(app: FastifyInstance): Promise<void> {
@@ -12,7 +14,7 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
         title: "Email Marketing Control API",
         description:
           "API HTTP responsável pela gestão operacional de campanhas, templates e dispatches.",
-        version: "0.1.0",
+        version: packageJson.version,
       },
       servers: [
         {
