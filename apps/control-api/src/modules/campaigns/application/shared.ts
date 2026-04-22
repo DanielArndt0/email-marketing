@@ -1,5 +1,6 @@
 import {
   createAudienceDefinition,
+  parseLeadSourceType,
   type AudienceDefinition,
   type CampaignStatus,
   type LeadSourceType,
@@ -16,7 +17,7 @@ export type CampaignRecord = {
   goal: string | null;
   status: CampaignStatus;
   templateId: string | null;
-  audience: AudienceDefinition;
+  audience: AudienceDefinition | null;
   scheduleAt: string | null;
   lastExecutionAt: string | null;
   createdAt: string;
@@ -31,18 +32,48 @@ export type CampaignListResult = {
   totalPages: number;
 };
 
+const VALID_CAMPAIGN_STATUSES: CampaignStatus[] = [
+  "draft",
+  "ready",
+  "scheduled",
+  "running",
+  "paused",
+  "completed",
+  "canceled",
+  "failed",
+];
+
+function toCampaignStatus(value: string): CampaignStatus {
+  if (VALID_CAMPAIGN_STATUSES.includes(value as CampaignStatus)) {
+    return value as CampaignStatus;
+  }
+
+  throw new Error(`Invalid campaign status returned from database: ${value}`);
+}
+
+function toAudienceDefinition(
+  sourceType: string | null,
+  filters: Record<string, unknown> | null,
+): AudienceDefinition | null {
+  if (!sourceType) {
+    return null;
+  }
+
+  return createAudienceDefinition({
+    sourceType: parseLeadSourceType(sourceType),
+    filters: filters ?? {},
+  });
+}
+
 export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
   return {
     id: row.id,
     name: row.name,
     subject: row.subject,
     goal: row.goal,
-    status: row.status,
+    status: toCampaignStatus(row.status),
     templateId: row.templateId,
-    audience: createAudienceDefinition({
-      sourceType: row.audienceSourceType,
-      filters: row.audienceFilters,
-    }),
+    audience: toAudienceDefinition(row.audienceSourceType, row.audienceFilters),
     scheduleAt: normalizeDateValue(row.scheduleAt),
     lastExecutionAt: normalizeDateValue(row.lastExecutionAt),
     createdAt: normalizeDateValue(row.createdAt) ?? "",

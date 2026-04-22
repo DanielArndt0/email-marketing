@@ -8,6 +8,7 @@ import {
   env,
 } from "shared";
 
+import { registerOpenApi } from "../presentation/openapi/register-openapi.js";
 import { registerRoutes } from "../presentation/routes/index.js";
 
 const logger = createLogger({
@@ -22,11 +23,14 @@ const app = Fastify({
   logger: false,
 });
 
+await registerOpenApi(app);
+
 registerRoutes(app, {
   pgPool,
   redis,
   emailDispatchQueue,
 });
+
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "iniciando encerramento gracioso da control-api");
 
@@ -70,6 +74,7 @@ async function start(): Promise<void> {
       {
         port: env.API_PORT,
         environment: env.NODE_ENV,
+        documentationUrl: `http://localhost:${env.API_PORT}/documentation`,
       },
       "control-api iniciada com sucesso",
     );

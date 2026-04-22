@@ -2,17 +2,17 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
-import type { CampaignStatus, LeadSourceType } from "core";
+import type { AudienceFilters } from "core";
 
 export type RawCampaignRow = {
   id: string;
   name: string;
-  subject: string | null;
   goal: string | null;
-  status: CampaignStatus;
+  subject: string;
+  status: string;
   templateId: string | null;
-  audienceSourceType: LeadSourceType | null;
-  audienceFilters: Record<string, unknown>;
+  audienceSourceType: string | null;
+  audienceFilters: AudienceFilters;
   scheduleAt: Date | string | null;
   lastExecutionAt: Date | string | null;
   createdAt: Date | string;
@@ -21,34 +21,17 @@ export type RawCampaignRow = {
 
 type CountRow = { total: string };
 
-export async function templateExists(
-  pgPool: Pool,
-  templateId: string,
-): Promise<boolean> {
-  const result = await pgPool.query<{ id: string }>(
-    `
-      SELECT id
-      FROM templates
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [templateId],
-  );
-
-  return Boolean(result.rows[0]);
-}
-
 export async function insertCampaign(
   pgPool: Pool,
   input: {
     name: string;
-    subject: string | null;
-    goal: string | null;
-    status: CampaignStatus;
-    templateId: string | null;
-    audienceSourceType: LeadSourceType | null;
-    audienceFilters: Record<string, unknown>;
-    scheduleAt: string | null;
+    goal?: string | undefined;
+    subject: string;
+    status: string;
+    templateId?: string | null | undefined;
+    audienceSourceType?: string | null | undefined;
+    audienceFilters: AudienceFilters;
+    scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow> {
   const id = randomUUID();
@@ -58,8 +41,8 @@ export async function insertCampaign(
       INSERT INTO campaigns (
         id,
         name,
-        subject,
         goal,
+        subject,
         status,
         template_id,
         audience_source_type,
@@ -70,8 +53,8 @@ export async function insertCampaign(
       RETURNING
         id,
         name,
-        subject,
         goal,
+        subject,
         status,
         template_id AS "templateId",
         audience_source_type AS "audienceSourceType",
@@ -84,13 +67,13 @@ export async function insertCampaign(
     [
       id,
       input.name,
+      input.goal ?? null,
       input.subject,
-      input.goal,
       input.status,
-      input.templateId,
-      input.audienceSourceType,
+      input.templateId ?? null,
+      input.audienceSourceType ?? null,
       JSON.stringify(input.audienceFilters),
-      input.scheduleAt,
+      input.scheduleAt ?? null,
     ],
   );
 
@@ -99,12 +82,7 @@ export async function insertCampaign(
 
 export async function listCampaignsPage(
   pgPool: Pool,
-  input: {
-    page: number;
-    pageSize: number;
-    status?: CampaignStatus | undefined;
-    sourceType?: LeadSourceType | undefined;
-  },
+  input: { page: number; pageSize: number; status?: string | undefined },
 ): Promise<{ items: RawCampaignRow[]; total: number }> {
   const values: unknown[] = [];
   const conditions: string[] = [];
@@ -114,13 +92,9 @@ export async function listCampaignsPage(
     conditions.push(`status = $${values.length}`);
   }
 
-  if (input.sourceType) {
-    values.push(input.sourceType);
-    conditions.push(`audience_source_type = $${values.length}`);
-  }
-
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const offset = (input.page - 1) * input.pageSize;
 
   const countResult = await pgPool.query<CountRow>(
     `
@@ -131,16 +105,15 @@ export async function listCampaignsPage(
     values,
   );
 
-  const offset = (input.page - 1) * input.pageSize;
-  const paginatedValues = [...values, input.pageSize, offset];
+  const listValues = [...values, input.pageSize, offset];
 
   const listResult = await pgPool.query<RawCampaignRow>(
     `
       SELECT
         id,
         name,
-        subject,
         goal,
+        subject,
         status,
         template_id AS "templateId",
         audience_source_type AS "audienceSourceType",
@@ -152,10 +125,10 @@ export async function listCampaignsPage(
       FROM campaigns
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT $${paginatedValues.length - 1}
-      OFFSET $${paginatedValues.length}
+      LIMIT $${listValues.length - 1}
+      OFFSET $${listValues.length}
     `,
-    paginatedValues,
+    listValues,
   );
 
   return {
@@ -173,8 +146,8 @@ export async function findCampaignById(
       SELECT
         id,
         name,
-        subject,
         goal,
+        subject,
         status,
         template_id AS "templateId",
         audience_source_type AS "audienceSourceType",
@@ -198,12 +171,12 @@ export async function updateCampaignById(
   input: {
     id: string;
     name?: string | undefined;
-    subject?: string | null | undefined;
     goal?: string | null | undefined;
-    status?: CampaignStatus | undefined;
+    subject?: string | undefined;
+    status?: string | undefined;
     templateId?: string | null | undefined;
-    audienceSourceType?: LeadSourceType | null | undefined;
-    audienceFilters?: Record<string, unknown> | undefined;
+    audienceSourceType?: string | null | undefined;
+    audienceFilters?: AudienceFilters | undefined;
     scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow | null> {
@@ -215,14 +188,14 @@ export async function updateCampaignById(
     fields.push(`name = $${values.length}`);
   }
 
-  if (input.subject !== undefined) {
-    values.push(input.subject);
-    fields.push(`subject = $${values.length}`);
-  }
-
   if (input.goal !== undefined) {
     values.push(input.goal);
     fields.push(`goal = $${values.length}`);
+  }
+
+  if (input.subject !== undefined) {
+    values.push(input.subject);
+    fields.push(`subject = $${values.length}`);
   }
 
   if (input.status !== undefined) {
@@ -261,8 +234,8 @@ export async function updateCampaignById(
       RETURNING
         id,
         name,
-        subject,
         goal,
+        subject,
         status,
         template_id AS "templateId",
         audience_source_type AS "audienceSourceType",

@@ -1,10 +1,16 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
+import { z } from "zod";
 
 import { getCampaignById } from "../application/get-campaign-by-id.js";
-import { campaignParamsSchema } from "./campaign-schema.js";
 
-type CreateGetCampaignByIdHandlerDependencies = { pgPool: Pool };
+const requestParamsSchema = z.object({
+  id: z.string().min(1),
+});
+
+type CreateGetCampaignByIdHandlerDependencies = {
+  pgPool: Pool;
+};
 
 export function createGetCampaignByIdHandler(
   dependencies: CreateGetCampaignByIdHandlerDependencies,
@@ -13,11 +19,14 @@ export function createGetCampaignByIdHandler(
     request: FastifyRequest,
     reply: FastifyReply,
   ) {
-    const params = campaignParamsSchema.parse(request.params);
+    const params = requestParamsSchema.parse(request.params);
+
     const campaign = await getCampaignById(dependencies, params.id);
 
     if (!campaign) {
-      return reply.status(404).send({ message: "Campanha não encontrada." });
+      return reply.status(404).send({
+        message: "Campaign não encontrada.",
+      });
     }
 
     return reply.status(200).send(campaign);

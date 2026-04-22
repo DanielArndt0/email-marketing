@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
-import { mapCampaignRow, type CampaignRecord } from "./shared.js";
 import { findCampaignById } from "../repositories/campaign-repository.js";
+import { mapCampaign, type CampaignViewModel } from "./create-campaign.js";
 
 type GetCampaignByIdDependencies = {
   pgPool: Pool;
@@ -10,8 +10,8 @@ type GetCampaignByIdDependencies = {
 export async function getCampaignById(
   dependencies: GetCampaignByIdDependencies,
   id: string,
-): Promise<CampaignRecord | null> {
-  const row = await findCampaignById(dependencies.pgPool, id);
+): Promise<CampaignViewModel | null> {
+  const campaign = await findCampaignById(dependencies.pgPool, id);
 
-  return row ? mapCampaignRow(row) : null;
+  return campaign ? mapCampaign(campaign) : null;
 }

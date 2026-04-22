@@ -5,7 +5,7 @@ export const CAMPAIGN_STATUSES = [
   "running",
   "paused",
   "completed",
-  "cancelled",
+  "canceled",
   "failed",
 ] as const;
 
@@ -18,10 +18,10 @@ export const campaignStatus = {
   running: "running",
   paused: "paused",
   completed: "completed",
-  cancelled: "cancelled",
+  canceled: "canceled",
   failed: "failed",
 } as const satisfies Record<CampaignStatus, CampaignStatus>;
 
-export function isCampaignStatus(value: string): value is CampaignStatus {
-  return CAMPAIGN_STATUSES.includes(value as CampaignStatus);
+export function canScheduleCampaign(status: CampaignStatus | string): boolean {
+  return status === campaignStatus.ready || status === campaignStatus.scheduled;
 }

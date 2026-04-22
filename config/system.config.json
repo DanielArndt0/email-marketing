@@ -26,6 +26,6 @@
     }
   },
   "mail": {
-    "fallbackText": "Envio processado pelo dispatch-worker sem conte\u00fado de texto definido."
+    "fallbackText": "Envio processado pelo dispatch-worker sem conteúdo de texto definido."
   }
 }

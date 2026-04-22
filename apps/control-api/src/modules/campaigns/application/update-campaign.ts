@@ -1,12 +1,10 @@
 import type { Pool } from "pg";
 
-import { mapCampaignRow, type CampaignRecord } from "./shared.js";
-import {
-  findCampaignById,
-  templateExists,
-  updateCampaignById,
-} from "../repositories/campaign-repository.js";
-import type { CampaignStatus, LeadSourceType } from "core";
+import type { AudienceDefinition, CampaignStatus } from "core";
+
+import { findTemplateById } from "../../templates/repositories/template-repository.js";
+import { updateCampaignById } from "../repositories/campaign-repository.js";
+import { mapCampaign, type CampaignViewModel } from "./create-campaign.js";
 
 type UpdateCampaignDependencies = {
   pgPool: Pool;
@@ -15,46 +13,58 @@ type UpdateCampaignDependencies = {
 export type UpdateCampaignInput = {
   id: string;
   name?: string | undefined;
-  subject?: string | null | undefined;
   goal?: string | null | undefined;
+  subject?: string | undefined;
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
-  audienceSourceType?: LeadSourceType | null | undefined;
-  audienceFilters?: Record<string, unknown> | undefined;
+  audience?: AudienceDefinition | null | undefined;
   scheduleAt?: string | null | undefined;
 };
 
 export type UpdateCampaignResult =
   | { kind: "not_found" }
   | { kind: "template_not_found" }
-  | { kind: "updated"; campaign: CampaignRecord };
+  | { kind: "updated"; campaign: CampaignViewModel };
 
 export async function updateCampaign(
   dependencies: UpdateCampaignDependencies,
   input: UpdateCampaignInput,
 ): Promise<UpdateCampaignResult> {
-  const current = await findCampaignById(dependencies.pgPool, input.id);
-
-  if (!current) {
-    return { kind: "not_found" };
-  }
-
   if (input.templateId) {
-    const exists = await templateExists(dependencies.pgPool, input.templateId);
+    const template = await findTemplateById(
+      dependencies.pgPool,
+      input.templateId,
+    );
 
-    if (!exists) {
+    if (!template) {
       return { kind: "template_not_found" };
     }
   }
 
-  const row = await updateCampaignById(dependencies.pgPool, input);
+  const updated = await updateCampaignById(dependencies.pgPool, {
+    id: input.id,
+    name: input.name,
+    goal: input.goal,
+    subject: input.subject,
+    status: input.status,
+    templateId: input.templateId,
+    audienceSourceType:
+      input.audience === undefined
+        ? undefined
+        : (input.audience?.sourceType ?? null),
+    audienceFilters:
+      input.audience === undefined
+        ? undefined
+        : (input.audience?.filters ?? {}),
+    scheduleAt: input.scheduleAt,
+  });
 
-  if (!row) {
+  if (!updated) {
     return { kind: "not_found" };
   }
 
   return {
     kind: "updated",
-    campaign: mapCampaignRow(row),
+    campaign: mapCampaign(updated),
   };
 }

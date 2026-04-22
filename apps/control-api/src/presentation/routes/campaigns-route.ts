@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifySchema } from "fastify";
 import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
@@ -9,11 +9,65 @@ import { createGetListCampaignsHandler } from "../../modules/campaigns/http/get-
 import { createPatchUpdateCampaignHandler } from "../../modules/campaigns/http/patch-update-campaign-handler.js";
 import { createPostCreateCampaignHandler } from "../../modules/campaigns/http/post-create-campaign-handler.js";
 import { createPostEnqueueEmailDispatchHandler } from "../../modules/campaigns/http/post-enqueue-email-dispatch-handler.js";
+import {
+  campaignCreateBodySchema,
+  campaignListQuerySchema,
+  campaignPaginationResponseSchema,
+  campaignParamsSchema,
+  campaignSchema,
+  campaignUpdateBodySchema,
+  notFoundMessageSchema,
+} from "../schemas/campaign-schemas.js";
 
 type RegisterCampaignsRouteDependencies = {
   pgPool: Pool;
   emailDispatchQueue: Queue<EmailDispatchJobData>;
 };
+
+const createCampaignRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Cria uma campanha",
+  body: campaignCreateBodySchema,
+  response: {
+    201: campaignSchema,
+    404: notFoundMessageSchema,
+  },
+} satisfies FastifySchema;
+
+const listCampaignsRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Lista campanhas com paginação",
+  querystring: campaignListQuerySchema,
+  response: {
+    200: campaignPaginationResponseSchema,
+  },
+} satisfies FastifySchema;
+
+const getCampaignByIdRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Consulta uma campanha por id",
+  params: campaignParamsSchema,
+  response: {
+    200: campaignSchema,
+    404: notFoundMessageSchema,
+  },
+} satisfies FastifySchema;
+
+const patchCampaignRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Atualiza parcialmente uma campanha",
+  params: campaignParamsSchema,
+  body: campaignUpdateBodySchema,
+  response: {
+    200: campaignSchema,
+    404: notFoundMessageSchema,
+  },
+} satisfies FastifySchema;
+
+const enqueueEmailDispatchRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Cria e enfileira um email dispatch",
+} satisfies FastifySchema;
 
 export function registerCampaignsRoute(
   app: FastifyInstance,
@@ -21,6 +75,9 @@ export function registerCampaignsRoute(
 ): void {
   app.post(
     "/campaigns",
+    {
+      schema: createCampaignRouteSchema,
+    },
     createPostCreateCampaignHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -28,6 +85,9 @@ export function registerCampaignsRoute(
 
   app.get(
     "/campaigns",
+    {
+      schema: listCampaignsRouteSchema,
+    },
     createGetListCampaignsHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -35,6 +95,9 @@ export function registerCampaignsRoute(
 
   app.get(
     "/campaigns/:id",
+    {
+      schema: getCampaignByIdRouteSchema,
+    },
     createGetCampaignByIdHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -42,6 +105,9 @@ export function registerCampaignsRoute(
 
   app.patch(
     "/campaigns/:id",
+    {
+      schema: patchCampaignRouteSchema,
+    },
     createPatchUpdateCampaignHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -49,6 +115,9 @@ export function registerCampaignsRoute(
 
   app.post(
     "/campaigns/email-dispatch",
+    {
+      schema: enqueueEmailDispatchRouteSchema,
+    },
     createPostEnqueueEmailDispatchHandler({
       pgPool: dependencies.pgPool,
       queue: dependencies.emailDispatchQueue,

@@ -18,9 +18,9 @@ const paginationSchema = z.object({
 const systemConfigSchema = z.object({
   api: z.object({
     pagination: z.object({
+      campaigns: paginationSchema,
       templates: paginationSchema,
       emailDispatches: paginationSchema,
-      campaigns: paginationSchema,
     }),
   }),
   queues: z.object({

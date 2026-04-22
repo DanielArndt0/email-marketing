@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifySchema } from "fastify";
 import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
@@ -13,12 +13,30 @@ type RegisterEmailDispatchesRouteDependencies = {
   emailDispatchQueue: Queue<EmailDispatchJobData>;
 };
 
+const listEmailDispatchesRouteSchema = {
+  tags: ["email-dispatches"],
+  summary: "Lista email dispatches com filtros e paginação",
+} satisfies FastifySchema;
+
+const getEmailDispatchByIdRouteSchema = {
+  tags: ["email-dispatches"],
+  summary: "Consulta um email dispatch por id",
+} satisfies FastifySchema;
+
+const retryEmailDispatchRouteSchema = {
+  tags: ["email-dispatches"],
+  summary: "Reenfileira um email dispatch com status de erro",
+} satisfies FastifySchema;
+
 export function registerEmailDispatchesRoute(
   app: FastifyInstance,
   dependencies: RegisterEmailDispatchesRouteDependencies,
 ): void {
   app.get(
     "/email-dispatches",
+    {
+      schema: listEmailDispatchesRouteSchema,
+    },
     createGetListEmailDispatchesHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -26,6 +44,9 @@ export function registerEmailDispatchesRoute(
 
   app.get(
     "/email-dispatches/:id",
+    {
+      schema: getEmailDispatchByIdRouteSchema,
+    },
     createGetEmailDispatchByIdHandler({
       pgPool: dependencies.pgPool,
     }),
@@ -33,6 +54,9 @@ export function registerEmailDispatchesRoute(
 
   app.post(
     "/email-dispatches/:id/retry",
+    {
+      schema: retryEmailDispatchRouteSchema,
+    },
     createPostRetryEmailDispatchHandler({
       pgPool: dependencies.pgPool,
       queue: dependencies.emailDispatchQueue,
