@@ -2,35 +2,35 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
-import type { AudienceFilters } from "core";
+type CountRow = { total: string };
 
 export type RawCampaignRow = {
   id: string;
   name: string;
   goal: string | null;
-  subject: string;
+  subject: string | null;
   status: string;
   templateId: string | null;
+  audienceId: string | null;
+  audienceName: string | null;
+  audienceDescription: string | null;
   audienceSourceType: string | null;
-  audienceFilters: AudienceFilters;
+  audienceFilters: Record<string, unknown> | null;
   scheduleAt: Date | string | null;
   lastExecutionAt: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 };
 
-type CountRow = { total: string };
-
 export async function insertCampaign(
   pgPool: Pool,
   input: {
     name: string;
     goal?: string | undefined;
-    subject: string;
+    subject?: string | null | undefined;
     status: string;
     templateId?: string | null | undefined;
-    audienceSourceType?: string | null | undefined;
-    audienceFilters: AudienceFilters;
+    audienceId?: string | null | undefined;
     scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow> {
@@ -45,11 +45,10 @@ export async function insertCampaign(
         subject,
         status,
         template_id,
-        audience_source_type,
-        audience_filters,
+        audience_id,
         schedule_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING
         id,
         name,
@@ -57,8 +56,7 @@ export async function insertCampaign(
         subject,
         status,
         template_id AS "templateId",
-        audience_source_type AS "audienceSourceType",
-        audience_filters AS "audienceFilters",
+        audience_id AS "audienceId",
         schedule_at AS "scheduleAt",
         last_execution_at AS "lastExecutionAt",
         created_at AS "createdAt",
@@ -68,28 +66,40 @@ export async function insertCampaign(
       id,
       input.name,
       input.goal ?? null,
-      input.subject,
+      input.subject ?? null,
       input.status,
       input.templateId ?? null,
-      input.audienceSourceType ?? null,
-      JSON.stringify(input.audienceFilters),
+      input.audienceId ?? null,
       input.scheduleAt ?? null,
     ],
   );
 
-  return result.rows[0]!;
+  return findCampaignById(
+    pgPool,
+    result.rows[0]!.id,
+  ) as Promise<RawCampaignRow>;
 }
 
 export async function listCampaignsPage(
   pgPool: Pool,
-  input: { page: number; pageSize: number; status?: string | undefined },
+  input: {
+    page: number;
+    pageSize: number;
+    status?: string | undefined;
+    audienceId?: string | undefined;
+  },
 ): Promise<{ items: RawCampaignRow[]; total: number }> {
   const values: unknown[] = [];
   const conditions: string[] = [];
 
   if (input.status) {
     values.push(input.status);
-    conditions.push(`status = $${values.length}`);
+    conditions.push(`c.status = $${values.length}`);
+  }
+
+  if (input.audienceId) {
+    values.push(input.audienceId);
+    conditions.push(`c.audience_id = $${values.length}`);
   }
 
   const whereClause =
@@ -99,7 +109,7 @@ export async function listCampaignsPage(
   const countResult = await pgPool.query<CountRow>(
     `
       SELECT COUNT(*)::text AS total
-      FROM campaigns
+      FROM campaigns c
       ${whereClause}
     `,
     values,
@@ -110,21 +120,25 @@ export async function listCampaignsPage(
   const listResult = await pgPool.query<RawCampaignRow>(
     `
       SELECT
-        id,
-        name,
-        goal,
-        subject,
-        status,
-        template_id AS "templateId",
-        audience_source_type AS "audienceSourceType",
-        audience_filters AS "audienceFilters",
-        schedule_at AS "scheduleAt",
-        last_execution_at AS "lastExecutionAt",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM campaigns
+        c.id,
+        c.name,
+        c.goal,
+        c.subject,
+        c.status,
+        c.template_id AS "templateId",
+        c.audience_id AS "audienceId",
+        a.name AS "audienceName",
+        a.description AS "audienceDescription",
+        a.source_type AS "audienceSourceType",
+        a.filters AS "audienceFilters",
+        c.schedule_at AS "scheduleAt",
+        c.last_execution_at AS "lastExecutionAt",
+        c.created_at AS "createdAt",
+        c.updated_at AS "updatedAt"
+      FROM campaigns c
+      LEFT JOIN audiences a ON a.id = c.audience_id
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY c.created_at DESC
       LIMIT $${listValues.length - 1}
       OFFSET $${listValues.length}
     `,
@@ -144,20 +158,24 @@ export async function findCampaignById(
   const result = await pgPool.query<RawCampaignRow>(
     `
       SELECT
-        id,
-        name,
-        goal,
-        subject,
-        status,
-        template_id AS "templateId",
-        audience_source_type AS "audienceSourceType",
-        audience_filters AS "audienceFilters",
-        schedule_at AS "scheduleAt",
-        last_execution_at AS "lastExecutionAt",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM campaigns
-      WHERE id = $1
+        c.id,
+        c.name,
+        c.goal,
+        c.subject,
+        c.status,
+        c.template_id AS "templateId",
+        c.audience_id AS "audienceId",
+        a.name AS "audienceName",
+        a.description AS "audienceDescription",
+        a.source_type AS "audienceSourceType",
+        a.filters AS "audienceFilters",
+        c.schedule_at AS "scheduleAt",
+        c.last_execution_at AS "lastExecutionAt",
+        c.created_at AS "createdAt",
+        c.updated_at AS "updatedAt"
+      FROM campaigns c
+      LEFT JOIN audiences a ON a.id = c.audience_id
+      WHERE c.id = $1
       LIMIT 1
     `,
     [id],
@@ -172,11 +190,10 @@ export async function updateCampaignById(
     id: string;
     name?: string | undefined;
     goal?: string | null | undefined;
-    subject?: string | undefined;
+    subject?: string | null | undefined;
     status?: string | undefined;
     templateId?: string | null | undefined;
-    audienceSourceType?: string | null | undefined;
-    audienceFilters?: AudienceFilters | undefined;
+    audienceId?: string | null | undefined;
     scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow | null> {
@@ -208,14 +225,9 @@ export async function updateCampaignById(
     fields.push(`template_id = $${values.length}`);
   }
 
-  if (input.audienceSourceType !== undefined) {
-    values.push(input.audienceSourceType);
-    fields.push(`audience_source_type = $${values.length}`);
-  }
-
-  if (input.audienceFilters !== undefined) {
-    values.push(JSON.stringify(input.audienceFilters));
-    fields.push(`audience_filters = $${values.length}::jsonb`);
+  if (input.audienceId !== undefined) {
+    values.push(input.audienceId);
+    fields.push(`audience_id = $${values.length}`);
   }
 
   if (input.scheduleAt !== undefined) {
@@ -223,30 +235,28 @@ export async function updateCampaignById(
     fields.push(`schedule_at = $${values.length}`);
   }
 
+  if (fields.length === 0) {
+    return findCampaignById(pgPool, input.id);
+  }
+
   fields.push("updated_at = NOW()");
   values.push(input.id);
 
-  const result = await pgPool.query<RawCampaignRow>(
+  const result = await pgPool.query<{ id: string }>(
     `
       UPDATE campaigns
       SET ${fields.join(", ")}
       WHERE id = $${values.length}
-      RETURNING
-        id,
-        name,
-        goal,
-        subject,
-        status,
-        template_id AS "templateId",
-        audience_source_type AS "audienceSourceType",
-        audience_filters AS "audienceFilters",
-        schedule_at AS "scheduleAt",
-        last_execution_at AS "lastExecutionAt",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      RETURNING id
     `,
     values,
   );
 
-  return result.rows[0] ?? null;
+  const row = result.rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return findCampaignById(pgPool, row.id);
 }

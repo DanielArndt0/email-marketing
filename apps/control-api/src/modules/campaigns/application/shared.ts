@@ -1,10 +1,8 @@
 import {
   createAudienceDefinition,
-  parseCampaignStatus,
   parseLeadSourceType,
   type AudienceDefinition,
   type CampaignStatus,
-  type LeadSourceType,
 } from "core";
 
 import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
@@ -18,7 +16,14 @@ export type CampaignRecord = {
   goal: string | null;
   status: CampaignStatus;
   templateId: string | null;
-  audience: AudienceDefinition | null;
+  audienceId: string | null;
+  audience:
+    | ({
+        id: string;
+        name: string;
+        description: string | null;
+      } & AudienceDefinition)
+    | null;
   scheduleAt: string | null;
   lastExecutionAt: string | null;
   createdAt: string;
@@ -33,18 +38,39 @@ export type CampaignListResult = {
   totalPages: number;
 };
 
-function toAudienceDefinition(
-  sourceType: string | null,
-  filters: Record<string, unknown> | null,
-): AudienceDefinition | null {
-  if (!sourceType) {
+const VALID_CAMPAIGN_STATUSES: CampaignStatus[] = [
+  "draft",
+  "ready",
+  "scheduled",
+  "running",
+  "paused",
+  "completed",
+  "canceled",
+  "failed",
+];
+
+function toCampaignStatus(value: string): CampaignStatus {
+  if (VALID_CAMPAIGN_STATUSES.includes(value as CampaignStatus)) {
+    return value as CampaignStatus;
+  }
+
+  throw new Error(`Invalid campaign status returned from database: ${value}`);
+}
+
+function toAudienceRecord(row: RawCampaignRow): CampaignRecord["audience"] {
+  if (!row.audienceId || !row.audienceSourceType) {
     return null;
   }
 
-  return createAudienceDefinition({
-    sourceType: parseLeadSourceType(sourceType),
-    filters: filters ?? {},
-  });
+  return {
+    id: row.audienceId,
+    name: row.audienceName ?? "Audience sem nome",
+    description: row.audienceDescription,
+    ...createAudienceDefinition({
+      sourceType: parseLeadSourceType(row.audienceSourceType),
+      filters: row.audienceFilters ?? {},
+    }),
+  };
 }
 
 export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
@@ -53,9 +79,10 @@ export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
     name: row.name,
     subject: row.subject,
     goal: row.goal,
-    status: parseCampaignStatus(row.status),
+    status: toCampaignStatus(row.status),
     templateId: row.templateId,
-    audience: toAudienceDefinition(row.audienceSourceType, row.audienceFilters),
+    audienceId: row.audienceId,
+    audience: toAudienceRecord(row),
     scheduleAt: normalizeDateValue(row.scheduleAt),
     lastExecutionAt: normalizeDateValue(row.lastExecutionAt),
     createdAt: normalizeDateValue(row.createdAt) ?? "",
@@ -78,14 +105,3 @@ export function buildCampaignListResult(input: {
     }),
   };
 }
-
-export type CampaignMutationInput = {
-  name: string;
-  subject?: string | null | undefined;
-  goal?: string | null | undefined;
-  status: CampaignStatus;
-  templateId?: string | null | undefined;
-  audienceSourceType?: LeadSourceType | null | undefined;
-  audienceFilters?: Record<string, unknown> | undefined;
-  scheduleAt?: string | null | undefined;
-};

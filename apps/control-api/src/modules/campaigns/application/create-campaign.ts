@@ -1,11 +1,8 @@
 import type { Pool } from "pg";
 
-import {
-  CAMPAIGN_STATUSES,
-  type AudienceDefinition,
-  type CampaignStatus,
-} from "core";
+import { CAMPAIGN_STATUSES, type CampaignStatus } from "core";
 
+import { findAudienceById } from "../../audiences/repositories/audience-repository.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
 import { insertCampaign } from "../repositories/campaign-repository.js";
 import { mapCampaignRow, type CampaignRecord } from "./shared.js";
@@ -17,18 +14,17 @@ type CreateCampaignDependencies = {
 export type CreateCampaignInput = {
   name: string;
   goal?: string | undefined;
-  subject: string;
+  subject?: string | null | undefined;
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
-  audience?: AudienceDefinition | undefined;
+  audienceId?: string | null | undefined;
   scheduleAt?: string | null | undefined;
 };
 
-export type CampaignViewModel = CampaignRecord;
-
 export type CreateCampaignResult =
   | { kind: "template_not_found" }
-  | { kind: "created"; campaign: CampaignViewModel };
+  | { kind: "audience_not_found" }
+  | { kind: "created"; campaign: CampaignRecord };
 
 export async function createCampaign(
   dependencies: CreateCampaignDependencies,
@@ -45,14 +41,24 @@ export async function createCampaign(
     }
   }
 
+  if (input.audienceId) {
+    const audience = await findAudienceById(
+      dependencies.pgPool,
+      input.audienceId,
+    );
+
+    if (!audience) {
+      return { kind: "audience_not_found" };
+    }
+  }
+
   const row = await insertCampaign(dependencies.pgPool, {
     name: input.name,
     goal: input.goal,
     subject: input.subject,
     status: input.status ?? CAMPAIGN_STATUSES[0],
     templateId: input.templateId,
-    audienceSourceType: input.audience?.sourceType,
-    audienceFilters: input.audience?.filters ?? {},
+    audienceId: input.audienceId,
     scheduleAt: input.scheduleAt,
   });
 

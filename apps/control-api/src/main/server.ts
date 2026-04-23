@@ -19,7 +19,7 @@ const logger = createLogger({
 const pgPool = createPgPool();
 const redis = createRedisConnection();
 const emailDispatchQueue = createEmailDispatchQueue();
-const leadSourceRegistry = createLeadSourceProviderRegistry();
+const providerRegistry = createLeadSourceProviderRegistry();
 
 const app = Fastify({
   logger: false,
@@ -31,7 +31,7 @@ registerRoutes(app, {
   pgPool,
   redis,
   emailDispatchQueue,
-  leadSourceRegistry,
+  providerRegistry,
 });
 
 async function shutdown(signal: string): Promise<void> {

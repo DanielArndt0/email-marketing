@@ -1,16 +1,24 @@
-export const audienceDefinitionSchema = {
-  type: "object",
-  required: ["sourceType", "filters"],
-  properties: {
-    sourceType: {
-      type: "string",
-      enum: ["cnpj-api", "csv-import", "manual-list"],
-    },
-    filters: {
+export const audienceSummarySchema = {
+  anyOf: [
+    {
       type: "object",
-      additionalProperties: true,
+      required: ["id", "name", "description", "sourceType", "filters"],
+      properties: {
+        id: { type: "string", examples: ["audience-001"] },
+        name: { type: "string", examples: ["Empresas PR por CNAE"] },
+        description: { type: ["string", "null"] },
+        sourceType: {
+          type: "string",
+          enum: ["cnpj-api", "csv-import", "manual-list"],
+        },
+        filters: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
     },
-  },
+    { type: "null" },
+  ],
 } as const;
 
 export const campaignSchema = {
@@ -22,6 +30,7 @@ export const campaignSchema = {
     "subject",
     "status",
     "templateId",
+    "audienceId",
     "audience",
     "scheduleAt",
     "lastExecutionAt",
@@ -32,7 +41,7 @@ export const campaignSchema = {
     id: { type: "string" },
     name: { type: "string" },
     goal: { type: ["string", "null"] },
-    subject: { type: "string" },
+    subject: { type: ["string", "null"] },
     status: {
       type: "string",
       enum: [
@@ -47,9 +56,8 @@ export const campaignSchema = {
       ],
     },
     templateId: { type: ["string", "null"] },
-    audience: {
-      anyOf: [audienceDefinitionSchema, { type: "null" }],
-    },
+    audienceId: { type: ["string", "null"] },
+    audience: audienceSummarySchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
     lastExecutionAt: { type: ["string", "null"], format: "date-time" },
     createdAt: { type: "string", format: "date-time" },
@@ -72,13 +80,13 @@ export const campaignPaginationResponseSchema = {
   },
 } as const;
 
-export const campaignCreateBodySchema = {
+export const createCampaignBodySchema = {
   type: "object",
-  required: ["name", "subject"],
+  required: ["name"],
   properties: {
-    name: { type: "string" },
-    goal: { type: "string" },
-    subject: { type: "string" },
+    name: { type: "string", examples: ["Campanha B2B Sul"] },
+    goal: { type: ["string", "null"] },
+    subject: { type: ["string", "null"] },
     status: {
       type: "string",
       enum: [
@@ -94,17 +102,17 @@ export const campaignCreateBodySchema = {
       default: "draft",
     },
     templateId: { type: ["string", "null"] },
-    audience: audienceDefinitionSchema,
+    audienceId: { type: ["string", "null"], examples: ["audience-001"] },
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },
 } as const;
 
-export const campaignUpdateBodySchema = {
+export const updateCampaignBodySchema = {
   type: "object",
   properties: {
     name: { type: "string" },
     goal: { type: ["string", "null"] },
-    subject: { type: "string" },
+    subject: { type: ["string", "null"] },
     status: {
       type: "string",
       enum: [
@@ -119,9 +127,7 @@ export const campaignUpdateBodySchema = {
       ],
     },
     templateId: { type: ["string", "null"] },
-    audience: {
-      anyOf: [audienceDefinitionSchema, { type: "null" }],
-    },
+    audienceId: { type: ["string", "null"] },
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },
   additionalProperties: false,
@@ -135,7 +141,7 @@ export const campaignParamsSchema = {
   },
 } as const;
 
-export const campaignListQuerySchema = {
+export const listCampaignsQuerySchema = {
   type: "object",
   properties: {
     status: {
@@ -151,6 +157,7 @@ export const campaignListQuerySchema = {
         "failed",
       ],
     },
+    audienceId: { type: "string" },
     page: { type: "integer", minimum: 1, default: 1 },
     pageSize: { type: "integer", minimum: 1, maximum: 100, default: 20 },
   },

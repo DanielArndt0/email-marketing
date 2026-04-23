@@ -21,6 +21,11 @@ const systemConfigSchema = z.object({
       campaigns: paginationSchema,
       templates: paginationSchema,
       emailDispatches: paginationSchema,
+      audiences: paginationSchema,
+    }),
+    preview: z.object({
+      defaultRecipientsLimit: z.number().int().positive(),
+      maxRecipientsLimit: z.number().int().positive(),
     }),
   }),
   queues: z.object({
@@ -34,12 +39,14 @@ const systemConfigSchema = z.object({
     fallbackText: z.string().min(1),
   }),
   leadSources: z.object({
-    preview: z.object({
-      defaultLimit: z.number().int().positive(),
-      maxLimit: z.number().int().positive(),
-    }),
     cnpjApi: z.object({
-      resolveRecipientsPath: z.string().min(1),
+      listByCnaePath: z.string().min(1),
+      listByCompanyNamePath: z.string().min(1),
+      listByPartnerNamePath: z.string().min(1),
+    }),
+    csvImport: z.object({
+      defaultDelimiter: z.string().min(1),
+      defaultEmailColumn: z.string().min(1),
     }),
   }),
 });

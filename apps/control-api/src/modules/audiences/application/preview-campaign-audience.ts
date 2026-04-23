@@ -1,56 +1,88 @@
 import type { Pool } from "pg";
+import { systemConfig } from "shared";
 
-// import { systemConfig } from "shared";
-
-import { findCampaignById } from "../../campaigns/repositories/campaign-repository.js";
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
-import type { AudiencePreviewResult } from "./shared.js";
+import { findAudienceById } from "../repositories/audience-repository.js";
+import {
+  resolveAudience,
+  type ResolveAudienceResult,
+} from "./resolve-audience.js";
 
 type PreviewCampaignAudienceDependencies = {
   pgPool: Pool;
-  registry: LeadSourceProviderRegistry;
+  providerRegistry: LeadSourceProviderRegistry;
 };
 
-export type PreviewCampaignAudienceInput = {
+type RawCampaignAudienceRow = {
   campaignId: string;
-  limit: number;
+  audienceId: string | null;
 };
 
 export type PreviewCampaignAudienceResult =
-  | { kind: "not_found" }
-  | { kind: "audience_not_defined" }
-  | { kind: "resolved"; preview: AudiencePreviewResult };
+  | { kind: "campaign_not_found" }
+  | { kind: "campaign_without_audience" }
+  | { kind: "audience_not_found" }
+  | {
+      kind: "resolved";
+      preview: ResolveAudienceResult & {
+        campaignId: string;
+        audienceId: string;
+      };
+    };
 
 export async function previewCampaignAudience(
   dependencies: PreviewCampaignAudienceDependencies,
-  input: PreviewCampaignAudienceInput,
+  input: { campaignId: string; limit?: number | undefined },
 ): Promise<PreviewCampaignAudienceResult> {
-  const campaign = await findCampaignById(
-    dependencies.pgPool,
-    input.campaignId,
-  );
+  const campaignResult =
+    await dependencies.pgPool.query<RawCampaignAudienceRow>(
+      `
+      SELECT
+        id AS "campaignId",
+        audience_id AS "audienceId"
+      FROM campaigns
+      WHERE id = $1
+      LIMIT 1
+    `,
+      [input.campaignId],
+    );
+
+  const campaign = campaignResult.rows[0];
 
   if (!campaign) {
-    return { kind: "not_found" };
+    return { kind: "campaign_not_found" };
   }
 
-  if (!campaign.audienceSourceType) {
-    return { kind: "audience_not_defined" };
+  if (!campaign.audienceId) {
+    return { kind: "campaign_without_audience" };
   }
 
-  const items = await dependencies.registry.resolveRecipients({
-    sourceType: campaign.audienceSourceType,
-    filters: campaign.audienceFilters ?? {},
-    limit: input.limit,
-  });
+  const audience = await findAudienceById(
+    dependencies.pgPool,
+    campaign.audienceId,
+  );
+
+  if (!audience) {
+    return { kind: "audience_not_found" };
+  }
+
+  const preview = await resolveAudience(
+    {
+      providerRegistry: dependencies.providerRegistry,
+    },
+    {
+      sourceType: audience.sourceType as never,
+      filters: audience.filters,
+      limit: input.limit ?? systemConfig.api.preview.defaultRecipientsLimit,
+    },
+  );
 
   return {
     kind: "resolved",
     preview: {
-      items,
-      count: items.length,
-      sourceType: campaign.audienceSourceType,
-      appliedLimit: input.limit,
+      campaignId: campaign.campaignId,
+      audienceId: audience.id,
+      ...preview,
     },
   };
 }

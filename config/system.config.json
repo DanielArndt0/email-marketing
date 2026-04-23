@@ -15,7 +15,16 @@
         "defaultPage": 1,
         "defaultPageSize": 20,
         "maxPageSize": 100
+      },
+      "audiences": {
+        "defaultPage": 1,
+        "defaultPageSize": 20,
+        "maxPageSize": 100
       }
+    },
+    "preview": {
+      "defaultRecipientsLimit": 20,
+      "maxRecipientsLimit": 100
     }
   },
   "queues": {
@@ -29,12 +38,14 @@
     "fallbackText": "Envio processado pelo dispatch-worker sem conteúdo de texto definido."
   },
   "leadSources": {
-    "preview": {
-      "defaultLimit": 20,
-      "maxLimit": 200
-    },
     "cnpjApi": {
-      "resolveRecipientsPath": "/api/leads/resolve"
+      "listByCnaePath": "/api/listas/empresas/cnae",
+      "listByCompanyNamePath": "/api/listas/empresas/razaosocial",
+      "listByPartnerNamePath": "/api/listas/empresas/socio"
+    },
+    "csvImport": {
+      "defaultDelimiter": ",",
+      "defaultEmailColumn": "email"
     }
   }
 }

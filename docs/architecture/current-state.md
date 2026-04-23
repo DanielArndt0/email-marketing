@@ -26,14 +26,14 @@ Atualmente, o sistema funciona assim:
 ### Packages
 
 - `packages/shared`: configuração, logger, conexões, fila, SMTP, renderização de template e migrations
-- `packages/core`: núcleo de domínio, contratos e tipos centrais
+- `packages/core`: núcleo de domínio em amadurecimento
 
 ## Organização interna da control-api
 
 A `control-api` está organizada em três áreas principais:
 
 - `main/`: bootstrap da aplicação
-- `presentation/`: rotas HTTP, schemas e OpenAPI
+- `presentation/`: rotas HTTP
 - `modules/`: módulos funcionais do sistema
 
 Dentro de cada módulo, a estrutura atual está organizada em:
@@ -41,7 +41,6 @@ Dentro de cada módulo, a estrutura atual está organizada em:
 - `application/`: casos de uso e orquestração
 - `http/`: handlers HTTP
 - `repositories/`: acesso a dados e queries SQL
-- `adapters/`: integrações específicas com fontes externas, quando necessário
 
 ## Organização interna do dispatch-worker
 
@@ -67,8 +66,6 @@ O arquivo JSON centraliza, neste momento:
 - nomes de fila
 - nomes de job
 - fallback de conteúdo textual para envio
-- defaults de preview de audiências
-- path da integração com a CNPJ API
 
 ## Módulos existentes
 
@@ -80,23 +77,12 @@ Responsável por validar disponibilidade de PostgreSQL e Redis.
 
 Responsável pelo gerenciamento inicial de campanhas, incluindo:
 
-- criação e consulta de campanhas
-- atualização parcial de campanhas
-- associação de template
-- definição de audiência por origem e filtros
-- persistência de dados operacionais básicos da campanha
-- enfileiramento de dispatches para execução assíncrona
-- pré-visualização dos destinatários resolvidos para uma campanha
-
-### Audiences
-
-Responsável por resolver destinatários a partir de lead sources e filtros.
-
-Atualmente, existem adapters para:
-
-- `cnpj-api`
-- `csv-import`
-- `manual-list`
+- criação e consulta de campanhas;
+- atualização parcial de campanhas;
+- associação de template;
+- definição de audiência por origem e filtros;
+- persistência de dados operacionais básicos da campanha;
+- enfileiramento de dispatches para execução assíncrona.
 
 ### Email Dispatches
 
@@ -114,13 +100,12 @@ Responsável por CRUD parcial de templates e integração com dispatch.
 - integração SMTP local com Mailpit
 - configuração geral menos hard-coded
 - separação mais clara entre caso de uso, repositório e infraestrutura
-- contratos explícitos para resolução de destinatários por fonte externa
 
 ## Débitos técnicos ainda existentes
 
-- `packages/core` ainda pode evoluir bastante em entidades e value objects
+- `packages/core` ainda pode evoluir bastante
 - ainda não há autenticação/autorização
 - ainda não há testes automatizados
+- ainda não existe camada explícita de entidades e value objects do domínio
 - não há padronização de erro de aplicação
 - a documentação ainda precisa crescer junto com os módulos
-- ainda não existe o módulo de `campaign executions`

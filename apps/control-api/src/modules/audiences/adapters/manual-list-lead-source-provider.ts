@@ -4,6 +4,15 @@ import type {
   ResolveRecipientsInput,
 } from "core";
 
+type ManualRecipientInput =
+  | string
+  | {
+      email?: unknown;
+      externalId?: unknown;
+      metadata?: unknown;
+      [key: string]: unknown;
+    };
+
 export class ManualListLeadSourceProvider implements LeadSourceProvider {
   readonly sourceType = "manual-list" as const;
 
@@ -12,43 +21,58 @@ export class ManualListLeadSourceProvider implements LeadSourceProvider {
   ): Promise<LeadRecipient[]> {
     const recipients = this.extractRecipients(input.filters);
 
-    return recipients.slice(0, input.limit);
+    return recipients
+      .map((recipient) => this.mapRecipient(recipient))
+      .filter((recipient): recipient is LeadRecipient => recipient !== null)
+      .slice(0, input.limit);
   }
 
-  private extractRecipients(filters: Record<string, unknown>): LeadRecipient[] {
-    const recipients = filters.recipients;
-    const emails = filters.emails;
-
-    if (Array.isArray(recipients)) {
-      return recipients
-        .filter(
-          (item): item is Record<string, unknown> =>
-            typeof item === "object" && item !== null,
-        )
-        .map((item) => ({
-          email: String(item.email ?? "").trim(),
-          externalId: item.externalId ? String(item.externalId) : null,
-          sourceType: this.sourceType,
-          metadata:
-            typeof item.metadata === "object" && item.metadata !== null
-              ? (item.metadata as Record<string, unknown>)
-              : {},
-        }))
-        .filter((item) => item.email.length > 0);
+  private extractRecipients(
+    filters: Record<string, unknown>,
+  ): ManualRecipientInput[] {
+    if (Array.isArray(filters.recipients)) {
+      return filters.recipients as ManualRecipientInput[];
     }
 
-    if (Array.isArray(emails)) {
-      return emails
-        .map((item) => String(item).trim())
-        .filter((email) => email.length > 0)
-        .map((email) => ({
-          email,
-          externalId: null,
-          sourceType: this.sourceType,
-          metadata: {},
-        }));
+    if (Array.isArray(filters.emails)) {
+      return filters.emails as ManualRecipientInput[];
     }
 
     return [];
+  }
+
+  private mapRecipient(input: ManualRecipientInput): LeadRecipient | null {
+    if (typeof input === "string") {
+      const email = input.trim();
+
+      if (!email) {
+        return null;
+      }
+
+      return {
+        email,
+        externalId: null,
+        sourceType: this.sourceType,
+        metadata: {},
+      };
+    }
+
+    const email = typeof input.email === "string" ? input.email.trim() : "";
+
+    if (!email) {
+      return null;
+    }
+
+    const { externalId, metadata, ...rest } = input;
+
+    return {
+      email,
+      externalId: typeof externalId === "string" ? externalId : null,
+      sourceType: this.sourceType,
+      metadata:
+        typeof metadata === "object" && metadata !== null
+          ? { ...(metadata as Record<string, unknown>), ...rest }
+          : rest,
+    };
   }
 }

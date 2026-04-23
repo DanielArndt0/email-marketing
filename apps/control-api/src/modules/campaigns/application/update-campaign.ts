@@ -1,7 +1,8 @@
 import type { Pool } from "pg";
 
-import type { AudienceDefinition, CampaignStatus } from "core";
+import type { CampaignStatus } from "core";
 
+import { findAudienceById } from "../../audiences/repositories/audience-repository.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
 import { updateCampaignById } from "../repositories/campaign-repository.js";
 import { mapCampaignRow, type CampaignRecord } from "./shared.js";
@@ -14,16 +15,17 @@ export type UpdateCampaignInput = {
   id: string;
   name?: string | undefined;
   goal?: string | null | undefined;
-  subject?: string | undefined;
+  subject?: string | null | undefined;
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
-  audience?: AudienceDefinition | null | undefined;
+  audienceId?: string | null | undefined;
   scheduleAt?: string | null | undefined;
 };
 
 export type UpdateCampaignResult =
   | { kind: "not_found" }
   | { kind: "template_not_found" }
+  | { kind: "audience_not_found" }
   | { kind: "updated"; campaign: CampaignRecord };
 
 export async function updateCampaign(
@@ -41,23 +43,18 @@ export async function updateCampaign(
     }
   }
 
-  const updated = await updateCampaignById(dependencies.pgPool, {
-    id: input.id,
-    name: input.name,
-    goal: input.goal,
-    subject: input.subject,
-    status: input.status,
-    templateId: input.templateId,
-    audienceSourceType:
-      input.audience === undefined
-        ? undefined
-        : (input.audience?.sourceType ?? null),
-    audienceFilters:
-      input.audience === undefined
-        ? undefined
-        : (input.audience?.filters ?? {}),
-    scheduleAt: input.scheduleAt,
-  });
+  if (input.audienceId) {
+    const audience = await findAudienceById(
+      dependencies.pgPool,
+      input.audienceId,
+    );
+
+    if (!audience) {
+      return { kind: "audience_not_found" };
+    }
+  }
+
+  const updated = await updateCampaignById(dependencies.pgPool, input);
 
   if (!updated) {
     return { kind: "not_found" };

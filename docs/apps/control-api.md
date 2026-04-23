@@ -1,87 +1,61 @@
 # Control API
 
-## Visão geral
+A `control-api` é a aplicação HTTP responsável pela gestão operacional do sistema.
 
-A `control-api` é a aplicação HTTP responsável por receber requisições externas e coordenar os fluxos operacionais do sistema de e-mail marketing.
+Atualmente, ela concentra:
 
-Ela atua como porta de entrada da aplicação, concentrando a exposição dos endpoints, a validação de entrada, a chamada de casos de uso e a integração com as camadas de persistência, fila e lead sources externos.
+- health check;
+- templates;
+- email dispatches;
+- campaigns;
+- audiences;
+- preview de audiences por source type ou por campaign.
 
-## Papel no sistema
+## Papel
 
-A `control-api` é responsável por:
+A API serve como porta de entrada para:
 
-- receber requisições HTTP
-- validar parâmetros, query strings e payloads
-- acionar fluxos de aplicação
-- persistir dados operacionais
-- enfileirar dispatches para processamento assíncrono
-- expor consultas operacionais do sistema
-- resolver audiências a partir de contratos de lead source
+- cadastrar templates;
+- cadastrar audiences persistidas;
+- vincular audiences a campaigns;
+- consultar previews de destinatários antes da execução;
+- registrar dispatches e enfileirar envios.
 
-## Responsabilidades atuais
+## Destaques atuais
 
-No estado atual do projeto, a `control-api` cobre principalmente:
+### Audiences persistidas
 
-- health check da aplicação
-- criação, listagem, consulta e atualização de campanhas
-- preview de audiência por campanha
-- resolução genérica de audiências por sourceType + filtros
-- criação de dispatches
-- consulta e retry de dispatches
-- criação, consulta, atualização e exclusão de templates
-- integração com fila para envio assíncrono de e-mails
+As audiences agora são recursos próprios do sistema. Elas podem ser cadastradas separadamente e reutilizadas em campaigns.
 
-## Estrutura interna
+### Campaigns vinculadas a audiences
 
-A aplicação está organizada, de forma geral, em:
+Cada campaign pode apontar para uma audience específica por `audienceId`.
 
-- `main/`: bootstrap da aplicação
-- `presentation/`: rotas, schemas e documentação OpenAPI
-- `modules/`: módulos funcionais da API
+### Preview operacional
 
-## Organização dos módulos
+É possível gerar preview:
 
-Cada módulo da API deve, sempre que possível, seguir a seguinte divisão:
+- diretamente via `POST /audiences/resolve`
+- por audience persistida via `GET /audiences/:id/preview`
+- pela audience vinculada a uma campaign via `GET /campaigns/:id/audience-preview`
 
-- `application/`: regras de orquestração e fluxo
-- `http/`: handlers e integração com a camada HTTP
-- `repositories/`: acesso a dados e persistência
-- `adapters/`: integrações concretas com serviços ou contratos externos
+## Lead sources suportados
 
-## Diretriz atual de arquitetura
+No estado atual, o sistema possui adapters para:
 
-A intenção da arquitetura é manter a API organizada por responsabilidade, com separação clara entre:
+- `cnpj-api`
+- `csv-import`
+- `manual-list`
 
-- entrada HTTP
-- lógica de aplicação
-- persistência
-- contratos de domínio
-- adapters de infraestrutura
+## OpenAPI / Swagger
 
-## Observação importante
-
-A camada `application` não deve concentrar SQL bruto nem detalhes de integração externa.
-
-Sempre que possível, o acesso a dados deve ficar isolado em `repositories/`, e integrações concretas devem ficar em `adapters/`, deixando a camada de aplicação mais legível, previsível e focada em fluxo.
-
-## Documentação de endpoints
-
-A documentação específica dos endpoints da `control-api` está em:
-
-- [Endpoints da Control API](./control-api/endpoints.md)
-
-A documentação OpenAPI/Swagger em ambiente local está disponível em:
+A documentação da API está disponível em:
 
 - `/documentation`
 - `/documentation/json`
 
-## Evolução futura esperada
+## Endpoints
 
-No futuro, esta aplicação deve evoluir para incluir:
+A referência operacional atual dos endpoints está em:
 
-- executions de campanha
-- resolução de audiência por múltiplas integrações
-- melhor padronização de erros
-- maior uso do `core` para regras centrais
-- redução adicional de hard-coded
-- amadurecimento dos contratos entre aplicação, domínio e infraestrutura
+- [Endpoints da Control API](./control-api/endpoints.md)

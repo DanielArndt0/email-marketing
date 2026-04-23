@@ -80,8 +80,8 @@ const environmentSchema = z.object({
   SMTP_FROM_EMAIL: z.string().email().default("no-reply@example.com"),
 
   CNPJ_API_BASE_URL: z.string().url().optional(),
-  CNPJ_API_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
   CNPJ_API_TOKEN: z.string().optional(),
+  CNPJ_API_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 });
 
 export const env = environmentSchema.parse(process.env);

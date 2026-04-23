@@ -4,60 +4,70 @@ import type {
   ResolveRecipientsInput,
 } from "core";
 
+import { systemConfig } from "shared";
+
 export class CsvImportLeadSourceProvider implements LeadSourceProvider {
   readonly sourceType = "csv-import" as const;
 
   async resolveRecipients(
     input: ResolveRecipientsInput,
   ): Promise<LeadRecipient[]> {
-    const csvContent = this.getString(input.filters.csvContent);
+    const csvContent =
+      typeof input.filters.csvContent === "string"
+        ? input.filters.csvContent
+        : "";
+    const delimiter =
+      typeof input.filters.delimiter === "string" &&
+      input.filters.delimiter.length > 0
+        ? input.filters.delimiter
+        : systemConfig.leadSources.csvImport.defaultDelimiter;
+    const emailColumn =
+      typeof input.filters.emailColumn === "string" &&
+      input.filters.emailColumn.length > 0
+        ? input.filters.emailColumn
+        : systemConfig.leadSources.csvImport.defaultEmailColumn;
 
-    if (!csvContent) {
+    if (!csvContent.trim()) {
       return [];
     }
 
-    const delimiter = this.getString(input.filters.delimiter) ?? ",";
-    const emailColumn = this.getString(input.filters.emailColumn) ?? "email";
-    const hasHeader = Boolean(input.filters.hasHeader ?? true);
-
-    const rows = csvContent
+    const lines = csvContent
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+      .filter(Boolean);
 
-    if (rows.length === 0) {
+    if (lines.length === 0) {
       return [];
     }
 
-    let header: string[] = [];
-    let dataRows = rows;
+    const headers = lines[0]!.split(delimiter).map((header) => header.trim());
+    const emailColumnIndex = headers.findIndex(
+      (header) => header.toLowerCase() === emailColumn.toLowerCase(),
+    );
 
-    if (hasHeader) {
-      header = rows[0]!.split(delimiter).map((item) => item.trim());
-      dataRows = rows.slice(1);
+    if (emailColumnIndex === -1) {
+      return [];
     }
 
     const recipients: LeadRecipient[] = [];
 
-    for (const row of dataRows) {
-      const columns = row.split(delimiter).map((item) => item.trim());
-
-      let email = "";
-      let metadata: Record<string, unknown> = {};
-
-      if (hasHeader && header.length > 0) {
-        metadata = Object.fromEntries(
-          header.map((columnName, index) => [columnName, columns[index] ?? ""]),
-        );
-        email = String(metadata[emailColumn] ?? "").trim();
-      } else {
-        email = columns[0] ?? "";
-        metadata = { columns };
-      }
+    for (const line of lines.slice(1)) {
+      const columns = line.split(delimiter).map((column) => column.trim());
+      const email = columns[emailColumnIndex] ?? "";
 
       if (!email) {
         continue;
       }
+
+      const metadata: Record<string, unknown> = {};
+
+      headers.forEach((header, index) => {
+        if (index === emailColumnIndex) {
+          return;
+        }
+
+        metadata[header] = columns[index] ?? "";
+      });
 
       recipients.push({
         email,
@@ -68,15 +78,5 @@ export class CsvImportLeadSourceProvider implements LeadSourceProvider {
     }
 
     return recipients.slice(0, input.limit);
-  }
-
-  private getString(value: unknown): string | undefined {
-    if (typeof value !== "string") {
-      return undefined;
-    }
-
-    const normalized = value.trim();
-
-    return normalized.length > 0 ? normalized : undefined;
   }
 }

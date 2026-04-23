@@ -16,7 +16,6 @@ O projeto está em evolução e, no momento, reúne:
 
 - uma **API de controle** para operação do sistema
 - um **worker de dispatch** para processamento assíncrono
-- contratos de lead source para resolução de audiências
 - pacotes internos compartilhados
 - documentação de arquitetura, setup e organização
 

@@ -16,7 +16,7 @@ type RegisterRoutesDependencies = {
   pgPool: Pool;
   redis: InstanceType<typeof RedisImport.default>;
   emailDispatchQueue: Queue<EmailDispatchJobData>;
-  leadSourceRegistry: LeadSourceProviderRegistry;
+  providerRegistry: LeadSourceProviderRegistry;
 };
 
 export function registerRoutes(
@@ -31,11 +31,12 @@ export function registerRoutes(
   registerCampaignsRoute(app, {
     pgPool: dependencies.pgPool,
     emailDispatchQueue: dependencies.emailDispatchQueue,
-    leadSourceRegistry: dependencies.leadSourceRegistry,
+    providerRegistry: dependencies.providerRegistry,
   });
 
   registerAudiencesRoute(app, {
-    registry: dependencies.leadSourceRegistry,
+    pgPool: dependencies.pgPool,
+    providerRegistry: dependencies.providerRegistry,
   });
 
   registerEmailDispatchesRoute(app, {

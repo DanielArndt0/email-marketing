@@ -1,135 +1,136 @@
 # Endpoints da Control API
 
-Este documento descreve os endpoints atualmente expostos pela `control-api`.
-
-A API já possui documentação OpenAPI/Swagger em ambiente local em `/documentation`, mas este arquivo continua servindo como visão rápida dos contratos principais.
-
-## Convenções gerais
-
-### Formato
-
-- A API trabalha com JSON.
-- Os exemplos abaixo consideram `Content-Type: application/json`.
-
-### Respostas
-
-- `200 OK`: consulta realizada com sucesso.
-- `201 Created`: recurso criado com sucesso.
-- `202 Accepted`: operação aceita para processamento assíncrono.
-- `404 Not Found`: recurso não encontrado.
-- `409 Conflict`: operação inválida para o estado atual do recurso.
-- `500 Internal Server Error`: erro interno inesperado.
-
----
-
-## Health
-
-### `GET /health`
-
-Verifica o estado atual da API e das integrações principais.
-
----
-
-## Campaigns
-
-### `POST /campaigns`
-
-Cria uma campanha em estado inicial, com template opcional e definição básica de audiência.
-
-### `GET /campaigns`
-
-Lista campanhas com paginação e filtro de status.
-
-### `GET /campaigns/:id`
-
-Consulta uma campanha específica por ID.
-
-### `PATCH /campaigns/:id`
-
-Atualiza parcialmente uma campanha.
-
-### `GET /campaigns/:id/audience-preview`
-
-Resolve e pré-visualiza os destinatários da audiência configurada na campanha.
-
-Query params:
-
-- `limit`: opcional
-
----
-
 ## Audiences
 
-### `POST /audiences/resolve`
+### `POST /audiences`
 
-Resolve destinatários a partir de uma origem (`sourceType`) e um conjunto de filtros.
+Cria uma audience persistida.
 
-#### Exemplo de body
+Exemplo:
 
 ```json
 {
-  "sourceType": "manual-list",
+  "name": "Empresas PR por CNAE",
+  "description": "Audience baseada na CNPJ API.",
+  "sourceType": "cnpj-api",
   "filters": {
-    "emails": ["teste@example.com", "contato@example.com"]
+    "searchType": "cnae",
+    "codigosCnae": ["6201501", "6202300"],
+    "uf": "PR",
+    "municipio": "Londrina"
+  }
+}
+```
+
+### `GET /audiences`
+
+Lista audiences cadastradas.
+
+### `GET /audiences/:id`
+
+Consulta uma audience por id.
+
+### `PATCH /audiences/:id`
+
+Atualiza parcialmente uma audience.
+
+### `DELETE /audiences/:id`
+
+Exclui uma audience sem vínculo com campaigns.
+
+### `POST /audiences/resolve`
+
+Resolve destinatários diretamente por `sourceType` e `filters`.
+
+Exemplo CNPJ API:
+
+```json
+{
+  "sourceType": "cnpj-api",
+  "filters": {
+    "searchType": "cnae",
+    "codigosCnae": ["6201501"],
+    "uf": "PR",
+    "municipio": "Londrina"
   },
   "limit": 20
 }
 ```
 
-`sourceType` atualmente suporta:
+Exemplo manual-list:
 
-- `cnpj-api`
-- `csv-import`
-- `manual-list`
+```json
+{
+  "sourceType": "manual-list",
+  "filters": {
+    "recipients": [
+      { "email": "contato@empresa.com", "externalId": "manual-001" },
+      { "email": "financeiro@empresa.com" }
+    ]
+  },
+  "limit": 20
+}
+```
 
----
+Exemplo csv-import:
 
-## Email Dispatches
+```json
+{
+  "sourceType": "csv-import",
+  "filters": {
+    "csvContent": "email,nome\ncontato@empresa.com,Empresa A",
+    "emailColumn": "email",
+    "delimiter": ","
+  },
+  "limit": 20
+}
+```
 
-### `POST /campaigns/email-dispatch`
+### `GET /audiences/:id/preview`
 
-Cria um dispatch de e-mail, persiste o envio e enfileira o processamento assíncrono.
+Resolve destinatários a partir de uma audience persistida.
 
-### `GET /email-dispatches`
+## Campaigns
 
-Lista dispatches com filtros básicos e paginação.
+### `POST /campaigns`
 
-### `GET /email-dispatches/:id`
+Cria uma campaign.
 
-Consulta um dispatch específico por ID.
+Exemplo:
 
-### `POST /email-dispatches/:id/retry`
+```json
+{
+  "name": "Campanha de expansão PR",
+  "goal": "Prospectar empresas de tecnologia",
+  "status": "draft",
+  "templateId": null,
+  "audienceId": "ID_DA_AUDIENCE",
+  "scheduleAt": null
+}
+```
 
-Reenfileira um dispatch com status `error`.
+### `GET /campaigns`
 
----
+Lista campaigns.
 
-## Templates
+### `GET /campaigns/:id`
 
-### `POST /templates`
+Consulta uma campaign por id.
 
-Cria um template.
+### `PATCH /campaigns/:id`
 
-### `GET /templates`
+Atualiza parcialmente uma campaign.
 
-Lista templates com paginação.
+### `GET /campaigns/:id/audience-preview`
 
-### `GET /templates/:id`
+Resolve a audience atualmente vinculada à campaign.
 
-Consulta um template por ID.
+## Observação sobre CNPJ API
 
-### `PATCH /templates/:id`
+O adapter `cnpj-api` foi alinhado às rotas de prospecção documentadas no repositório da CNPJ API:
 
-Atualiza parcialmente um template.
+- `GET /api/listas/empresas/cnae`
+- `GET /api/listas/empresas/razaosocial`
+- `GET /api/listas/empresas/socio`
 
-### `DELETE /templates/:id`
-
-Exclui um template quando não houver dispatches vinculados.
-
----
-
-## Observação final
-
-Este documento descreve o estado atual dos endpoints conhecidos da `control-api`.
-
-Sempre que novos endpoints forem adicionados, alterados ou removidos, este arquivo deve ser atualizado.
+Essas rotas aceitam paginação por `page` e `limit`, retornam apenas estabelecimentos ativos e exigem `uf` quando `municipio` é informado. citeturn447502view0turn447502view4

@@ -5,37 +5,39 @@ import type { Pool } from "pg";
 import type { EmailDispatchJobData } from "shared";
 
 import type { LeadSourceProviderRegistry } from "../../modules/audiences/adapters/lead-source-provider-registry.js";
-import { createGetCampaignAudiencePreviewHandler } from "../../modules/audiences/http/get-campaign-audience-preview-handler.js";
+import { createGetPreviewCampaignAudienceHandler } from "../../modules/audiences/http/get-preview-campaign-audience-handler.js";
 import { createGetCampaignByIdHandler } from "../../modules/campaigns/http/get-campaign-by-id-handler.js";
 import { createGetListCampaignsHandler } from "../../modules/campaigns/http/get-list-campaigns-handler.js";
 import { createPatchUpdateCampaignHandler } from "../../modules/campaigns/http/patch-update-campaign-handler.js";
 import { createPostCreateCampaignHandler } from "../../modules/campaigns/http/post-create-campaign-handler.js";
 import { createPostEnqueueEmailDispatchHandler } from "../../modules/campaigns/http/post-enqueue-email-dispatch-handler.js";
 import {
-  audiencePreviewQuerySchema,
-  audiencePreviewResponseSchema,
-  notConfiguredMessageSchema,
-} from "../schemas/audience-schemas.js";
-import {
-  campaignCreateBodySchema,
-  campaignListQuerySchema,
   campaignPaginationResponseSchema,
   campaignParamsSchema,
   campaignSchema,
-  campaignUpdateBodySchema,
+  createCampaignBodySchema,
+  listCampaignsQuerySchema,
   notFoundMessageSchema,
+  updateCampaignBodySchema,
 } from "../schemas/campaign-schemas.js";
+import {
+  audiencePreviewQuerySchema,
+  audiencePreviewSchema,
+  messageSchema,
+} from "../schemas/audience-schemas.js";
 
 type RegisterCampaignsRouteDependencies = {
   pgPool: Pool;
   emailDispatchQueue: Queue<EmailDispatchJobData>;
-  leadSourceRegistry: LeadSourceProviderRegistry;
+  providerRegistry: LeadSourceProviderRegistry;
 };
 
 const createCampaignRouteSchema = {
   tags: ["campaigns"],
-  summary: "Cria uma campanha",
-  body: campaignCreateBodySchema,
+  summary: "Cria uma campaign",
+  description:
+    "Cria uma campaign e vincula templateId e audienceId quando informados.",
+  body: createCampaignBodySchema,
   response: {
     201: campaignSchema,
     404: notFoundMessageSchema,
@@ -44,8 +46,8 @@ const createCampaignRouteSchema = {
 
 const listCampaignsRouteSchema = {
   tags: ["campaigns"],
-  summary: "Lista campanhas com paginação",
-  querystring: campaignListQuerySchema,
+  summary: "Lista campaigns com paginação",
+  querystring: listCampaignsQuerySchema,
   response: {
     200: campaignPaginationResponseSchema,
   },
@@ -53,7 +55,7 @@ const listCampaignsRouteSchema = {
 
 const getCampaignByIdRouteSchema = {
   tags: ["campaigns"],
-  summary: "Consulta uma campanha por id",
+  summary: "Consulta uma campaign por id",
   params: campaignParamsSchema,
   response: {
     200: campaignSchema,
@@ -63,31 +65,30 @@ const getCampaignByIdRouteSchema = {
 
 const patchCampaignRouteSchema = {
   tags: ["campaigns"],
-  summary: "Atualiza parcialmente uma campanha",
+  summary: "Atualiza parcialmente uma campaign",
   params: campaignParamsSchema,
-  body: campaignUpdateBodySchema,
+  body: updateCampaignBodySchema,
   response: {
     200: campaignSchema,
     404: notFoundMessageSchema,
   },
 } satisfies FastifySchema;
 
-const enqueueEmailDispatchRouteSchema = {
+const previewCampaignAudienceRouteSchema = {
   tags: ["campaigns"],
-  summary: "Cria e enfileira um email dispatch",
-} satisfies FastifySchema;
-
-const campaignAudiencePreviewRouteSchema = {
-  tags: ["campaigns"],
-  summary:
-    "Pré-visualiza os destinatários resolvidos para a audiência da campanha",
+  summary: "Gera preview da audience vinculada à campaign",
   params: campaignParamsSchema,
   querystring: audiencePreviewQuerySchema,
   response: {
-    200: audiencePreviewResponseSchema,
-    404: notFoundMessageSchema,
-    409: notConfiguredMessageSchema,
+    200: audiencePreviewSchema,
+    404: messageSchema,
+    409: messageSchema,
   },
+} satisfies FastifySchema;
+
+const enqueueEmailDispatchRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Cria e enfileira um email dispatch",
 } satisfies FastifySchema;
 
 export function registerCampaignsRoute(
@@ -124,17 +125,6 @@ export function registerCampaignsRoute(
     }),
   );
 
-  app.get(
-    "/campaigns/:id/audience-preview",
-    {
-      schema: campaignAudiencePreviewRouteSchema,
-    },
-    createGetCampaignAudiencePreviewHandler({
-      pgPool: dependencies.pgPool,
-      registry: dependencies.leadSourceRegistry,
-    }),
-  );
-
   app.patch(
     "/campaigns/:id",
     {
@@ -142,6 +132,17 @@ export function registerCampaignsRoute(
     },
     createPatchUpdateCampaignHandler({
       pgPool: dependencies.pgPool,
+    }),
+  );
+
+  app.get(
+    "/campaigns/:id/audience-preview",
+    {
+      schema: previewCampaignAudienceRouteSchema,
+    },
+    createGetPreviewCampaignAudienceHandler({
+      pgPool: dependencies.pgPool,
+      providerRegistry: dependencies.providerRegistry,
     }),
   );
 

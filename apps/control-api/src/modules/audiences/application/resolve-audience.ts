@@ -1,32 +1,47 @@
-// import type { LeadRecipient } from "core";
+import type { LeadRecipient, LeadSourceType } from "core";
+import { parseLeadSourceType } from "core";
+import { systemConfig } from "shared";
 
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
-import type { AudiencePreviewResult } from "./shared.js";
 
 type ResolveAudienceDependencies = {
-  registry: LeadSourceProviderRegistry;
+  providerRegistry: LeadSourceProviderRegistry;
 };
 
 export type ResolveAudienceInput = {
-  sourceType: string;
+  sourceType: LeadSourceType;
   filters: Record<string, unknown>;
-  limit: number;
+  limit?: number | undefined;
+};
+
+export type ResolveAudienceResult = {
+  items: LeadRecipient[];
+  count: number;
+  sourceType: LeadSourceType;
+  requestedLimit: number;
 };
 
 export async function resolveAudience(
   dependencies: ResolveAudienceDependencies,
   input: ResolveAudienceInput,
-): Promise<AudiencePreviewResult> {
-  const items = await dependencies.registry.resolveRecipients({
-    sourceType: input.sourceType,
+): Promise<ResolveAudienceResult> {
+  const limit = input.limit ?? systemConfig.api.preview.defaultRecipientsLimit;
+  const boundedLimit = Math.min(
+    limit,
+    systemConfig.api.preview.maxRecipientsLimit,
+  );
+  const sourceType = parseLeadSourceType(input.sourceType);
+
+  const provider = dependencies.providerRegistry.get(sourceType);
+  const items = await provider.resolveRecipients({
     filters: input.filters,
-    limit: input.limit,
+    limit: boundedLimit,
   });
 
   return {
     items,
     count: items.length,
-    sourceType: input.sourceType,
-    appliedLimit: input.limit,
+    sourceType,
+    requestedLimit: boundedLimit,
   };
 }

@@ -11,7 +11,6 @@ export async function getCampaignById(
   dependencies: GetCampaignByIdDependencies,
   id: string,
 ): Promise<CampaignRecord | null> {
-  const campaign = await findCampaignById(dependencies.pgPool, id);
-
-  return campaign ? mapCampaignRow(campaign) : null;
+  const row = await findCampaignById(dependencies.pgPool, id);
+  return row ? mapCampaignRow(row) : null;
 }
