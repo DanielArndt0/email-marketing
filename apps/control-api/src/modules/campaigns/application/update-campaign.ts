@@ -4,7 +4,7 @@ import type { AudienceDefinition, CampaignStatus } from "core";
 
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
 import { updateCampaignById } from "../repositories/campaign-repository.js";
-import { mapCampaign, type CampaignViewModel } from "./create-campaign.js";
+import { mapCampaignRow, type CampaignRecord } from "./shared.js";
 
 type UpdateCampaignDependencies = {
   pgPool: Pool;
@@ -24,7 +24,7 @@ export type UpdateCampaignInput = {
 export type UpdateCampaignResult =
   | { kind: "not_found" }
   | { kind: "template_not_found" }
-  | { kind: "updated"; campaign: CampaignViewModel };
+  | { kind: "updated"; campaign: CampaignRecord };
 
 export async function updateCampaign(
   dependencies: UpdateCampaignDependencies,
@@ -65,6 +65,6 @@ export async function updateCampaign(
 
   return {
     kind: "updated",
-    campaign: mapCampaign(updated),
+    campaign: mapCampaignRow(updated),
   };
 }

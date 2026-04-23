@@ -22,6 +22,18 @@ export const campaignStatus = {
   failed: "failed",
 } as const satisfies Record<CampaignStatus, CampaignStatus>;
 
+export function isCampaignStatus(value: string): value is CampaignStatus {
+  return CAMPAIGN_STATUSES.includes(value as CampaignStatus);
+}
+
+export function parseCampaignStatus(value: string): CampaignStatus {
+  if (isCampaignStatus(value)) {
+    return value;
+  }
+
+  throw new Error(`Invalid campaign status: ${value}`);
+}
+
 export function canScheduleCampaign(status: CampaignStatus | string): boolean {
   return status === campaignStatus.ready || status === campaignStatus.scheduled;
 }

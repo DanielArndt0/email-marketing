@@ -13,7 +13,7 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
       info: {
         title: "Email Marketing Control API",
         description:
-          "API HTTP responsável pela gestão operacional de campanhas, templates e dispatches.",
+          "API HTTP responsável pela gestão operacional de campanhas, templates, audiences e dispatches.",
         version: packageJson.version,
       },
       servers: [
@@ -26,7 +26,11 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
         { name: "health", description: "Verificações operacionais da API" },
         {
           name: "campaigns",
-          description: "Gestão de campanhas e enfileiramento",
+          description: "Gestão de campanhas e pré-visualização de audiência",
+        },
+        {
+          name: "audiences",
+          description: "Resolução de destinatários por lead source e filtros",
         },
         {
           name: "email-dispatches",

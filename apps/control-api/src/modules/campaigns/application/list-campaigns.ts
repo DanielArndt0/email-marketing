@@ -2,9 +2,8 @@ import type { Pool } from "pg";
 
 import type { CampaignStatus } from "core";
 
-import { buildPaginationMeta } from "../../../shared/persistence/build-pagination-meta.js";
 import { listCampaignsPage } from "../repositories/campaign-repository.js";
-import { mapCampaign, type CampaignViewModel } from "./create-campaign.js";
+import { buildCampaignListResult, type CampaignListResult } from "./shared.js";
 
 type ListCampaignsDependencies = {
   pgPool: Pool;
@@ -16,13 +15,7 @@ export type ListCampaignsFilters = {
   status?: CampaignStatus | undefined;
 };
 
-export type ListCampaignsResult = {
-  items: CampaignViewModel[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-};
+export type ListCampaignsResult = CampaignListResult;
 
 export async function listCampaigns(
   dependencies: ListCampaignsDependencies,
@@ -33,12 +26,10 @@ export async function listCampaigns(
     filters,
   );
 
-  return {
-    items: items.map(mapCampaign),
-    ...buildPaginationMeta({
-      page: filters.page,
-      pageSize: filters.pageSize,
-      total,
-    }),
-  };
+  return buildCampaignListResult({
+    rows: items,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    total,
+  });
 }

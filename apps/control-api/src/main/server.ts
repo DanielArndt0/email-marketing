@@ -8,6 +8,7 @@ import {
   env,
 } from "shared";
 
+import { createLeadSourceProviderRegistry } from "../modules/audiences/adapters/lead-source-provider-registry.js";
 import { registerOpenApi } from "../presentation/openapi/register-openapi.js";
 import { registerRoutes } from "../presentation/routes/index.js";
 
@@ -18,6 +19,7 @@ const logger = createLogger({
 const pgPool = createPgPool();
 const redis = createRedisConnection();
 const emailDispatchQueue = createEmailDispatchQueue();
+const leadSourceRegistry = createLeadSourceProviderRegistry();
 
 const app = Fastify({
   logger: false,
@@ -29,6 +31,7 @@ registerRoutes(app, {
   pgPool,
   redis,
   emailDispatchQueue,
+  leadSourceRegistry,
 });
 
 async function shutdown(signal: string): Promise<void> {

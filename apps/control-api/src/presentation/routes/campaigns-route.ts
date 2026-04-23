@@ -4,11 +4,18 @@ import type { Pool } from "pg";
 
 import type { EmailDispatchJobData } from "shared";
 
+import type { LeadSourceProviderRegistry } from "../../modules/audiences/adapters/lead-source-provider-registry.js";
+import { createGetCampaignAudiencePreviewHandler } from "../../modules/audiences/http/get-campaign-audience-preview-handler.js";
 import { createGetCampaignByIdHandler } from "../../modules/campaigns/http/get-campaign-by-id-handler.js";
 import { createGetListCampaignsHandler } from "../../modules/campaigns/http/get-list-campaigns-handler.js";
 import { createPatchUpdateCampaignHandler } from "../../modules/campaigns/http/patch-update-campaign-handler.js";
 import { createPostCreateCampaignHandler } from "../../modules/campaigns/http/post-create-campaign-handler.js";
 import { createPostEnqueueEmailDispatchHandler } from "../../modules/campaigns/http/post-enqueue-email-dispatch-handler.js";
+import {
+  audiencePreviewQuerySchema,
+  audiencePreviewResponseSchema,
+  notConfiguredMessageSchema,
+} from "../schemas/audience-schemas.js";
 import {
   campaignCreateBodySchema,
   campaignListQuerySchema,
@@ -22,6 +29,7 @@ import {
 type RegisterCampaignsRouteDependencies = {
   pgPool: Pool;
   emailDispatchQueue: Queue<EmailDispatchJobData>;
+  leadSourceRegistry: LeadSourceProviderRegistry;
 };
 
 const createCampaignRouteSchema = {
@@ -69,6 +77,19 @@ const enqueueEmailDispatchRouteSchema = {
   summary: "Cria e enfileira um email dispatch",
 } satisfies FastifySchema;
 
+const campaignAudiencePreviewRouteSchema = {
+  tags: ["campaigns"],
+  summary:
+    "Pré-visualiza os destinatários resolvidos para a audiência da campanha",
+  params: campaignParamsSchema,
+  querystring: audiencePreviewQuerySchema,
+  response: {
+    200: audiencePreviewResponseSchema,
+    404: notFoundMessageSchema,
+    409: notConfiguredMessageSchema,
+  },
+} satisfies FastifySchema;
+
 export function registerCampaignsRoute(
   app: FastifyInstance,
   dependencies: RegisterCampaignsRouteDependencies,
@@ -100,6 +121,17 @@ export function registerCampaignsRoute(
     },
     createGetCampaignByIdHandler({
       pgPool: dependencies.pgPool,
+    }),
+  );
+
+  app.get(
+    "/campaigns/:id/audience-preview",
+    {
+      schema: campaignAudiencePreviewRouteSchema,
+    },
+    createGetCampaignAudiencePreviewHandler({
+      pgPool: dependencies.pgPool,
+      registry: dependencies.leadSourceRegistry,
     }),
   );
 

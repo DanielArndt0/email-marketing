@@ -27,5 +27,14 @@
   },
   "mail": {
     "fallbackText": "Envio processado pelo dispatch-worker sem conteúdo de texto definido."
+  },
+  "leadSources": {
+    "preview": {
+      "defaultLimit": 20,
+      "maxLimit": 200
+    },
+    "cnpjApi": {
+      "resolveRecipientsPath": "/api/leads/resolve"
+    }
   }
 }

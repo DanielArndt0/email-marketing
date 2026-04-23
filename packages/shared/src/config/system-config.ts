@@ -33,6 +33,15 @@ const systemConfigSchema = z.object({
   mail: z.object({
     fallbackText: z.string().min(1),
   }),
+  leadSources: z.object({
+    preview: z.object({
+      defaultLimit: z.number().int().positive(),
+      maxLimit: z.number().int().positive(),
+    }),
+    cnpjApi: z.object({
+      resolveRecipientsPath: z.string().min(1),
+    }),
+  }),
 });
 
 function loadSystemConfig() {

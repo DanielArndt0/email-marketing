@@ -6,12 +6,9 @@ import {
   type CampaignStatus,
 } from "core";
 
-import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
-import {
-  insertCampaign,
-  type RawCampaignRow,
-} from "../repositories/campaign-repository.js";
+import { insertCampaign } from "../repositories/campaign-repository.js";
+import { mapCampaignRow, type CampaignRecord } from "./shared.js";
 
 type CreateCampaignDependencies = {
   pgPool: Pool;
@@ -27,45 +24,11 @@ export type CreateCampaignInput = {
   scheduleAt?: string | null | undefined;
 };
 
-export type CampaignViewModel = {
-  id: string;
-  name: string;
-  goal: string | null;
-  subject: string;
-  status: string;
-  templateId: string | null;
-  audience: AudienceDefinition | null;
-  scheduleAt: string | null;
-  lastExecutionAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type CampaignViewModel = CampaignRecord;
 
 export type CreateCampaignResult =
   | { kind: "template_not_found" }
   | { kind: "created"; campaign: CampaignViewModel };
-
-function mapCampaign(row: RawCampaignRow): CampaignViewModel {
-  return {
-    id: row.id,
-    name: row.name,
-    goal: row.goal,
-    subject: row.subject,
-    status: row.status,
-    templateId: row.templateId,
-    audience: row.audienceSourceType
-      ? {
-          sourceType:
-            row.audienceSourceType as AudienceDefinition["sourceType"],
-          filters: row.audienceFilters,
-        }
-      : null,
-    scheduleAt: normalizeDateValue(row.scheduleAt),
-    lastExecutionAt: normalizeDateValue(row.lastExecutionAt),
-    createdAt: normalizeDateValue(row.createdAt) ?? "",
-    updatedAt: normalizeDateValue(row.updatedAt) ?? "",
-  };
-}
 
 export async function createCampaign(
   dependencies: CreateCampaignDependencies,
@@ -95,8 +58,6 @@ export async function createCampaign(
 
   return {
     kind: "created",
-    campaign: mapCampaign(row),
+    campaign: mapCampaignRow(row),
   };
 }
-
-export { mapCampaign };

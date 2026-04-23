@@ -148,3 +148,13 @@ Consulte também:
 ## Observação final
 
 Esta documentação deve evoluir junto com a arquitetura e o fluxo real do projeto.
+
+## Integração opcional com a CNPJ API
+
+Para testar o lead source `cnpj-api`, configure no arquivo `.env`:
+
+- `CNPJ_API_BASE_URL`
+- `CNPJ_API_TIMEOUT_MS`
+- `CNPJ_API_TOKEN` (opcional)
+
+Além disso, o caminho usado pela `control-api` para resolver destinatários é definido em `config/system.config.json` em `leadSources.cnpjApi.resolveRecipientsPath`.
