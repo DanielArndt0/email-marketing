@@ -26,9 +26,7 @@ export function createLeadSourceProviderRegistry(): LeadSourceProviderRegistry {
       const provider = providers.get(sourceType);
 
       if (!provider) {
-        throw new Error(
-          `Lead source provider não encontrado para sourceType=${sourceType}.`,
-        );
+        throw new Error(`Lead source provider não encontrado para sourceType=${sourceType}.`);
       }
 
       return provider;

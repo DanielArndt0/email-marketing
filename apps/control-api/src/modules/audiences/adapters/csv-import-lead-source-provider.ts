@@ -1,29 +1,18 @@
-import type {
-  LeadRecipient,
-  LeadSourceProvider,
-  ResolveRecipientsInput,
-} from "core";
+import type { LeadRecipient, LeadSourceProvider, ResolveRecipientsInput } from "core";
 
 import { systemConfig } from "shared";
 
 export class CsvImportLeadSourceProvider implements LeadSourceProvider {
   readonly sourceType = "csv-import" as const;
 
-  async resolveRecipients(
-    input: ResolveRecipientsInput,
-  ): Promise<LeadRecipient[]> {
-    const csvContent =
-      typeof input.filters.csvContent === "string"
-        ? input.filters.csvContent
-        : "";
+  async resolveRecipients(input: ResolveRecipientsInput): Promise<LeadRecipient[]> {
+    const csvContent = typeof input.filters.csvContent === "string" ? input.filters.csvContent : "";
     const delimiter =
-      typeof input.filters.delimiter === "string" &&
-      input.filters.delimiter.length > 0
+      typeof input.filters.delimiter === "string" && input.filters.delimiter.length > 0
         ? input.filters.delimiter
         : systemConfig.leadSources.csvImport.defaultDelimiter;
     const emailColumn =
-      typeof input.filters.emailColumn === "string" &&
-      input.filters.emailColumn.length > 0
+      typeof input.filters.emailColumn === "string" && input.filters.emailColumn.length > 0
         ? input.filters.emailColumn
         : systemConfig.leadSources.csvImport.defaultEmailColumn;
 

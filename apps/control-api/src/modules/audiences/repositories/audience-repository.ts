@@ -47,13 +47,7 @@ export async function insertAudience(
         created_at AS "createdAt",
         updated_at AS "updatedAt"
     `,
-    [
-      id,
-      input.name,
-      input.description ?? null,
-      input.sourceType,
-      JSON.stringify(input.filters),
-    ],
+    [id, input.name, input.description ?? null, input.sourceType, JSON.stringify(input.filters)],
   );
 
   return result.rows[0]!;

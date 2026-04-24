@@ -33,10 +33,7 @@ export async function updateCampaign(
   input: UpdateCampaignInput,
 ): Promise<UpdateCampaignResult> {
   if (input.templateId) {
-    const template = await findTemplateById(
-      dependencies.pgPool,
-      input.templateId,
-    );
+    const template = await findTemplateById(dependencies.pgPool, input.templateId);
 
     if (!template) {
       return { kind: "template_not_found" };
@@ -44,10 +41,7 @@ export async function updateCampaign(
   }
 
   if (input.audienceId) {
-    const audience = await findAudienceById(
-      dependencies.pgPool,
-      input.audienceId,
-    );
+    const audience = await findAudienceById(dependencies.pgPool, input.audienceId);
 
     if (!audience) {
       return { kind: "audience_not_found" };

@@ -2,10 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 
 import { updateCampaign } from "../application/update-campaign.js";
-import {
-  campaignParamsSchema,
-  updateCampaignBodySchema,
-} from "./campaign-schema.js";
+import { campaignParamsSchema, updateCampaignBodySchema } from "./campaign-schema.js";
 
 type CreatePatchUpdateCampaignHandlerDependencies = {
   pgPool: Pool;

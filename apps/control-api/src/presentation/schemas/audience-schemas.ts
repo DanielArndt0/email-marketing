@@ -1,3 +1,42 @@
+export const audienceFiltersSchema = {
+  type: "object",
+  additionalProperties: true,
+  description:
+    "Filtros específicos do sourceType. Para cnpj-api, usar mode=cnae|razao-social|socio, além dos campos principais de cada modo.",
+  examples: [
+    {
+      mode: "cnae",
+      page: 1,
+      codigosCnae: ["6201501", "6202300"],
+      uf: "PR",
+      municipio: "Londrina",
+    },
+    {
+      mode: "razao-social",
+      page: 1,
+      razaoSocial: "tecnologia",
+      uf: "SC",
+    },
+    {
+      mode: "socio",
+      page: 1,
+      nomeSocio: "JOSE",
+      uf: "SP",
+    },
+    {
+      recipients: [
+        { email: "contato@empresa.com", externalId: "manual-001" },
+        { email: "financeiro@empresa.com" },
+      ],
+    },
+    {
+      csvContent: "email,nome\ncontato@empresa.com,Empresa A",
+      emailColumn: "email",
+      delimiter: ",",
+    },
+  ],
+} as const;
+
 export const audienceRecordSchema = {
   type: "object",
   required: ["id", "name", "definition", "createdAt", "updatedAt"],
@@ -17,18 +56,7 @@ export const audienceRecordSchema = {
           enum: ["cnpj-api", "csv-import", "manual-list"],
           examples: ["cnpj-api"],
         },
-        filters: {
-          type: "object",
-          additionalProperties: true,
-          examples: [
-            {
-              searchType: "cnae",
-              codigosCnae: ["6201501", "6202300"],
-              uf: "PR",
-              municipio: "Londrina",
-            },
-          ],
-        },
+        filters: audienceFiltersSchema,
       },
     },
     createdAt: { type: "string", examples: ["2026-04-23T10:00:00.000Z"] },
@@ -59,6 +87,11 @@ export const audienceParamsSchema = {
 export const audiencePreviewQuerySchema = {
   type: "object",
   properties: {
+    page: {
+      type: "integer",
+      minimum: 1,
+      examples: [1],
+    },
     limit: {
       type: "integer",
       minimum: 1,
@@ -82,34 +115,7 @@ export const audienceCreateBodySchema = {
       enum: ["cnpj-api", "csv-import", "manual-list"],
       examples: ["cnpj-api"],
     },
-    filters: {
-      type: "object",
-      additionalProperties: true,
-      examples: [
-        {
-          searchType: "cnae",
-          codigosCnae: ["6201501", "6202300"],
-          uf: "PR",
-          municipio: "Londrina",
-        },
-        {
-          searchType: "razao-social",
-          razaoSocial: "tecnologia",
-          uf: "SC",
-        },
-        {
-          recipients: [
-            { email: "contato@empresa.com", externalId: "manual-001" },
-            { email: "financeiro@empresa.com" },
-          ],
-        },
-        {
-          csvContent: "email,nome\ncontato@empresa.com,Empresa A",
-          emailColumn: "email",
-          delimiter: ",",
-        },
-      ],
-    },
+    filters: audienceFiltersSchema,
   },
 } as const;
 
@@ -126,11 +132,7 @@ export const audienceUpdateBodySchema = {
       enum: ["cnpj-api", "csv-import", "manual-list"],
       examples: ["manual-list"],
     },
-    filters: {
-      type: "object",
-      additionalProperties: true,
-      examples: [{ recipients: [{ email: "novo@empresa.com" }] }],
-    },
+    filters: audienceFiltersSchema,
   },
   minProperties: 1,
 } as const;
@@ -144,29 +146,11 @@ export const audienceResolveBodySchema = {
       enum: ["cnpj-api", "csv-import", "manual-list"],
       examples: ["cnpj-api"],
     },
-    filters: {
-      type: "object",
-      additionalProperties: true,
-      description:
-        "Filtros dependem do sourceType. Para cnpj-api, usar searchType=cnae|razao-social|socio.",
-      examples: [
-        {
-          searchType: "cnae",
-          codigosCnae: ["6201501"],
-          uf: "PR",
-          municipio: "Londrina",
-        },
-        {
-          searchType: "razao-social",
-          razaoSocial: "tecnologia",
-          uf: "SP",
-        },
-        {
-          searchType: "socio",
-          nomeSocio: "JOSE",
-          uf: "RJ",
-        },
-      ],
+    filters: audienceFiltersSchema,
+    page: {
+      type: "integer",
+      minimum: 1,
+      examples: [1],
     },
     limit: {
       type: "integer",
@@ -181,11 +165,7 @@ export const leadRecipientSchema = {
   type: "object",
   required: ["email", "externalId", "sourceType", "metadata"],
   properties: {
-    email: {
-      type: "string",
-      format: "email",
-      examples: ["contato@empresa.com"],
-    },
+    email: { type: "string", format: "email", examples: ["contato@empresa.com"] },
     externalId: {
       anyOf: [{ type: "string" }, { type: "null" }],
       examples: ["12345678000199"],
@@ -197,6 +177,7 @@ export const leadRecipientSchema = {
     },
     metadata: {
       type: "object",
+      additionalProperties: true,
       examples: [{ companyName: "Empresa A", city: "Londrina" }],
     },
   },
@@ -204,7 +185,7 @@ export const leadRecipientSchema = {
 
 export const audiencePreviewSchema = {
   type: "object",
-  required: ["sourceType", "requestedLimit", "count", "items"],
+  required: ["sourceType", "requestedPage", "requestedLimit", "count", "items"],
   properties: {
     audienceId: {
       anyOf: [{ type: "string" }, { type: "null" }],
@@ -219,6 +200,7 @@ export const audiencePreviewSchema = {
       enum: ["cnpj-api", "csv-import", "manual-list"],
       examples: ["cnpj-api"],
     },
+    requestedPage: { type: "integer", examples: [1] },
     requestedLimit: { type: "integer", examples: [20] },
     count: { type: "integer", examples: [2] },
     items: {

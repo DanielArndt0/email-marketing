@@ -30,8 +30,7 @@ export function createDeleteAudienceHandler(
 
     if (result.kind === "in_use") {
       return reply.status(409).send({
-        message:
-          "A audience não pode ser excluída porque já está vinculada a campanhas.",
+        message: "A audience não pode ser excluída porque já está vinculada a campanhas.",
         campaignsCount: result.campaignsCount,
       });
     }

@@ -3,10 +3,7 @@ import { systemConfig } from "shared";
 
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
 import { findAudienceById } from "../repositories/audience-repository.js";
-import {
-  resolveAudience,
-  type ResolveAudienceResult,
-} from "./resolve-audience.js";
+import { resolveAudience, type ResolveAudienceResult } from "./resolve-audience.js";
 
 type PreviewAudienceDependencies = {
   pgPool: Pool;
@@ -15,19 +12,13 @@ type PreviewAudienceDependencies = {
 
 export type PreviewAudienceResult =
   | { kind: "not_found" }
-  | {
-      kind: "resolved";
-      preview: ResolveAudienceResult & { audienceId: string };
-    };
+  | { kind: "resolved"; preview: ResolveAudienceResult & { audienceId: string } };
 
 export async function previewAudience(
   dependencies: PreviewAudienceDependencies,
-  input: { audienceId: string; limit?: number | undefined },
+  input: { audienceId: string; limit?: number | undefined; page?: number | undefined },
 ): Promise<PreviewAudienceResult> {
-  const audience = await findAudienceById(
-    dependencies.pgPool,
-    input.audienceId,
-  );
+  const audience = await findAudienceById(dependencies.pgPool, input.audienceId);
 
   if (!audience) {
     return { kind: "not_found" };
@@ -41,6 +32,7 @@ export async function previewAudience(
       sourceType: audience.sourceType as never,
       filters: audience.filters,
       limit: input.limit ?? systemConfig.api.preview.defaultRecipientsLimit,
+      page: input.page ?? 1,
     },
   );
 

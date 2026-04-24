@@ -12,6 +12,7 @@ export type ResolveAudienceInput = {
   sourceType: LeadSourceType;
   filters: Record<string, unknown>;
   limit?: number | undefined;
+  page?: number | undefined;
 };
 
 export type ResolveAudienceResult = {
@@ -19,6 +20,7 @@ export type ResolveAudienceResult = {
   count: number;
   sourceType: LeadSourceType;
   requestedLimit: number;
+  requestedPage: number;
 };
 
 export async function resolveAudience(
@@ -26,16 +28,15 @@ export async function resolveAudience(
   input: ResolveAudienceInput,
 ): Promise<ResolveAudienceResult> {
   const limit = input.limit ?? systemConfig.api.preview.defaultRecipientsLimit;
-  const boundedLimit = Math.min(
-    limit,
-    systemConfig.api.preview.maxRecipientsLimit,
-  );
+  const boundedLimit = Math.min(limit, systemConfig.api.preview.maxRecipientsLimit);
   const sourceType = parseLeadSourceType(input.sourceType);
+  const page = typeof input.page === "number" && input.page > 0 ? Math.trunc(input.page) : 1;
 
   const provider = dependencies.providerRegistry.get(sourceType);
   const items = await provider.resolveRecipients({
     filters: input.filters,
     limit: boundedLimit,
+    page,
   });
 
   return {
@@ -43,5 +44,6 @@ export async function resolveAudience(
     count: items.length,
     sourceType,
     requestedLimit: boundedLimit,
+    requestedPage: page,
   };
 }

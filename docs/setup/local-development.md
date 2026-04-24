@@ -158,3 +158,20 @@ Para usar o lead source `cnpj-api`, configure no `.env`:
 - `CNPJ_API_TIMEOUT_MS`
 
 Em ambiente local, a base costuma apontar para `http://localhost:3000`.
+
+## Integração local com a CNPJ API
+
+Quando o lead source `cnpj-api` estiver habilitado, a aplicação usa as rotas especializadas de prospecção da CNPJ API.
+
+Campos comuns esperados nos filtros:
+
+- `page`
+- `limit`
+- `uf` opcional
+- `municipio` opcional, sempre com `uf`
+
+Campo principal por modo:
+
+- `mode: "cnae"` -> `codigosCnae`
+- `mode: "razao-social"` -> `razaoSocial`
+- `mode: "socio"` -> `nomeSocio`

@@ -17,13 +17,7 @@ export type CampaignRecord = {
   status: CampaignStatus;
   templateId: string | null;
   audienceId: string | null;
-  audience:
-    | ({
-        id: string;
-        name: string;
-        description: string | null;
-      } & AudienceDefinition)
-    | null;
+  audience: ({ id: string; name: string; description: string | null } & AudienceDefinition) | null;
   scheduleAt: string | null;
   lastExecutionAt: string | null;
   createdAt: string;

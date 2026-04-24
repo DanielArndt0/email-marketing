@@ -99,6 +99,7 @@ const resolveAudienceRouteSchema = {
   body: audienceResolveBodySchema,
   response: {
     200: audiencePreviewSchema,
+    400: messageSchema,
   },
 } satisfies FastifySchema;
 
@@ -109,6 +110,7 @@ const previewAudienceRouteSchema = {
   querystring: audiencePreviewQuerySchema,
   response: {
     200: audiencePreviewSchema,
+    400: messageSchema,
     404: messageSchema,
   },
 } satisfies FastifySchema;

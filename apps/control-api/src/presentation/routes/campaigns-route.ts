@@ -20,11 +20,7 @@ import {
   notFoundMessageSchema,
   updateCampaignBodySchema,
 } from "../schemas/campaign-schemas.js";
-import {
-  audiencePreviewQuerySchema,
-  audiencePreviewSchema,
-  messageSchema,
-} from "../schemas/audience-schemas.js";
+import { audiencePreviewQuerySchema, audiencePreviewSchema, messageSchema } from "../schemas/audience-schemas.js";
 
 type RegisterCampaignsRouteDependencies = {
   pgPool: Pool;
@@ -81,6 +77,7 @@ const previewCampaignAudienceRouteSchema = {
   querystring: audiencePreviewQuerySchema,
   response: {
     200: audiencePreviewSchema,
+    400: messageSchema,
     404: messageSchema,
     409: messageSchema,
   },
