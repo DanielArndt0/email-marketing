@@ -4,6 +4,7 @@ import type { LeadSourceType } from "core";
 
 import { insertAudience } from "../repositories/audience-repository.js";
 import { mapAudienceRow, type AudienceRecord } from "./shared.js";
+import { normalizeAudienceFilters } from "./normalize-audience-filters.js";
 
 type CreateAudienceDependencies = {
   pgPool: Pool;
@@ -20,6 +21,12 @@ export async function createAudience(
   dependencies: CreateAudienceDependencies,
   input: CreateAudienceInput,
 ): Promise<AudienceRecord> {
-  const row = await insertAudience(dependencies.pgPool, input);
+  const normalizedInput: CreateAudienceInput = {
+    ...input,
+    filters: normalizeAudienceFilters(input.filters),
+  };
+
+  const row = await insertAudience(dependencies.pgPool, normalizedInput);
+
   return mapAudienceRow(row);
 }

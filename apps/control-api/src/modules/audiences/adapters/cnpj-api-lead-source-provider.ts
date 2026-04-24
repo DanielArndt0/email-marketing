@@ -264,10 +264,7 @@ export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
 
       const payload = (await response.json()) as unknown;
 
-      console.log(
-        "[CNPJ API PAYLOAD]",
-        JSON.stringify(payload, null, 2),
-      );
+      console.log("[CNPJ API PAYLOAD]", JSON.stringify(payload, null, 2));
 
       return payload;
     } catch (error) {

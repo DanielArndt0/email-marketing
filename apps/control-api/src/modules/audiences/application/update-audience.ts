@@ -4,6 +4,7 @@ import type { LeadSourceType } from "core";
 
 import { updateAudienceById } from "../repositories/audience-repository.js";
 import { mapAudienceRow, type AudienceRecord } from "./shared.js";
+import { normalizeAudienceFilters } from "./normalize-audience-filters.js";
 
 type UpdateAudienceDependencies = {
   pgPool: Pool;
@@ -25,7 +26,14 @@ export async function updateAudience(
   dependencies: UpdateAudienceDependencies,
   input: UpdateAudienceInput,
 ): Promise<UpdateAudienceResult> {
-  const row = await updateAudienceById(dependencies.pgPool, input);
+  const normalizedInput: UpdateAudienceInput = {
+    ...input,
+    filters: input.filters
+      ? normalizeAudienceFilters(input.filters)
+      : undefined,
+  };
+
+  const row = await updateAudienceById(dependencies.pgPool, normalizedInput);
 
   if (!row) {
     return { kind: "not_found" };
