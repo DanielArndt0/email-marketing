@@ -74,12 +74,20 @@ export async function insertCampaign(
     ],
   );
 
-  return findCampaignById(pgPool, result.rows[0]!.id) as Promise<RawCampaignRow>;
+  return findCampaignById(
+    pgPool,
+    result.rows[0]!.id,
+  ) as Promise<RawCampaignRow>;
 }
 
 export async function listCampaignsPage(
   pgPool: Pool,
-  input: { page: number; pageSize: number; status?: string | undefined; audienceId?: string | undefined },
+  input: {
+    page: number;
+    pageSize: number;
+    status?: string | undefined;
+    audienceId?: string | undefined;
+  },
 ): Promise<{ items: RawCampaignRow[]; total: number }> {
   const values: unknown[] = [];
   const conditions: string[] = [];
@@ -94,7 +102,8 @@ export async function listCampaignsPage(
     conditions.push(`c.audience_id = $${values.length}`);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const offset = (input.page - 1) * input.pageSize;
 
   const countResult = await pgPool.query<CountRow>(
@@ -250,4 +259,26 @@ export async function updateCampaignById(
   }
 
   return findCampaignById(pgPool, row.id);
+}
+
+export async function findCampaignAudienceLinkById(
+  pgPool: Pool,
+  campaignId: string,
+): Promise<{ campaignId: string; audienceId: string | null } | null> {
+  const result = await pgPool.query<{
+    campaignId: string;
+    audienceId: string | null;
+  }>(
+    `
+      SELECT
+        id AS "campaignId",
+        audience_id AS "audienceId"
+      FROM campaigns
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [campaignId],
+  );
+
+  return result.rows[0] ?? null;
 }

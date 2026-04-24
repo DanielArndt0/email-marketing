@@ -1,82 +1,196 @@
-import type { LeadRecipient, LeadSourceProvider, ResolveRecipientsInput } from "core";
+import type {
+  LeadRecipient,
+  LeadSourceProvider,
+  ResolveRecipientsInput,
+} from "core";
 
 import { env, systemConfig } from "shared";
+
+import {
+  LeadSourceConfigurationError,
+  LeadSourceRequestError,
+} from "../errors/lead-source-errors.js";
 
 type RawCnpjApiItem =
   | string
   | {
       email?: unknown;
       emails?: unknown;
+      correioEletronico?: unknown;
+      emailPrincipal?: unknown;
+      contactEmail?: unknown;
       externalId?: unknown;
       id?: unknown;
       cnpj?: unknown;
       cnpjCompleto?: unknown;
+      cnpjFull?: unknown;
       metadata?: unknown;
       [key: string]: unknown;
     };
 
 type CnpjApiSearchType = "cnae" | "razao-social" | "socio";
 
+type CnpjApiFilters = {
+  searchType: CnpjApiSearchType;
+  page: number;
+  limit: number;
+  uf?: string | undefined;
+  municipio?: string | undefined;
+  codigosCnae?: string | undefined;
+  razaoSocial?: string | undefined;
+  nomeSocio?: string | undefined;
+};
+
+type CnpjApiQuery = Record<string, string | number | undefined>;
+
+const CNPJ_API_SEARCH_TYPES = ["cnae", "razao-social", "socio"] as const;
+const MIN_TEXT_SEARCH_LENGTH = 3;
+
 export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
   readonly sourceType = "cnpj-api" as const;
 
-  async resolveRecipients(input: ResolveRecipientsInput): Promise<LeadRecipient[]> {
-    if (!env.CNPJ_API_BASE_URL) {
-      throw new Error("CNPJ_API_BASE_URL não configurado para o lead source cnpj-api.");
+  async resolveRecipients(
+    input: ResolveRecipientsInput,
+  ): Promise<LeadRecipient[]> {
+    const baseUrl = env.CNPJ_API_BASE_URL;
+
+    if (!baseUrl) {
+      throw new LeadSourceConfigurationError(
+        "CNPJ_API_BASE_URL não configurado para o lead source cnpj-api.",
+      );
     }
 
-    const searchType = this.getSearchType(input.filters);
-    const path = this.getPathBySearchType(searchType);
-    const query = this.buildQuery(searchType, input);
+    const filters = this.normalizeFilters(input);
+    const url = this.buildUrl(filters, baseUrl);
+    const responsePayload = await this.fetchCnpjApi(url);
+    const items = this.extractItems(responsePayload);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), env.CNPJ_API_TIMEOUT_MS);
+    return items
+      .map((item) => this.mapItem(item))
+      .filter((item): item is LeadRecipient => item !== null)
+      .slice(0, filters.limit);
+  }
 
-    try {
-      const url = new URL(path, env.CNPJ_API_BASE_URL);
+  private normalizeFilters(input: ResolveRecipientsInput): CnpjApiFilters {
+    const filters = input.filters;
+    const searchType = this.getSearchType(filters);
+    const page = this.getPositiveInteger(filters.page) ?? 1;
+    const limit = this.getPositiveInteger(filters.limit) ?? input.limit;
+    const uf = this.getOptionalString(filters.uf)?.toUpperCase();
+    const municipio = this.getOptionalString(filters.municipio);
 
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          url.searchParams.set(key, String(value));
-        }
-      });
+    if (municipio && !uf) {
+      throw new LeadSourceConfigurationError(
+        "No lead source cnpj-api, municipio exige uf.",
+      );
+    }
 
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          ...(env.CNPJ_API_TOKEN ? { authorization: `Bearer ${env.CNPJ_API_TOKEN}` } : {}),
-        },
-        signal: controller.signal,
-      });
+    switch (searchType) {
+      case "cnae":
+        return {
+          searchType,
+          page,
+          limit,
+          uf,
+          municipio,
+          codigosCnae: this.getRequiredCnaeCodes(filters),
+        };
 
-      if (!response.ok) {
-        throw new Error(`CNPJ API respondeu com status ${response.status}.`);
-      }
+      case "razao-social":
+        return {
+          searchType,
+          page,
+          limit,
+          uf,
+          municipio,
+          razaoSocial: this.getRequiredTextFilter(
+            filters.razaoSocial,
+            "razaoSocial",
+            searchType,
+          ),
+        };
 
-      const payload = (await response.json()) as unknown;
-      const items = this.extractItems(payload);
-
-      return items
-        .map((item) => this.mapItem(item))
-        .filter((item): item is LeadRecipient => item !== null)
-        .slice(0, input.limit);
-    } finally {
-      clearTimeout(timeout);
+      case "socio":
+        return {
+          searchType,
+          page,
+          limit,
+          uf,
+          municipio,
+          nomeSocio: this.getRequiredTextFilter(
+            filters.nomeSocio,
+            "nomeSocio",
+            searchType,
+          ),
+        };
     }
   }
 
   private getSearchType(filters: Record<string, unknown>): CnpjApiSearchType {
-    const mode = filters.mode;
-    const searchType = filters.searchType;
-    const candidate = typeof mode === "string" ? mode : typeof searchType === "string" ? searchType : null;
+    const rawSearchType = filters.searchType ?? filters.mode;
 
-    if (candidate === "cnae" || candidate === "razao-social" || candidate === "socio") {
-      return candidate;
+    if (
+      typeof rawSearchType === "string" &&
+      CNPJ_API_SEARCH_TYPES.includes(rawSearchType as CnpjApiSearchType)
+    ) {
+      return rawSearchType as CnpjApiSearchType;
     }
 
-    throw new Error(
-      "Em audiences do tipo cnpj-api, informe mode (ou searchType) com um dos valores: cnae, razao-social, socio.",
+    throw new LeadSourceConfigurationError(
+      "Em audiences do tipo cnpj-api, informe searchType ou mode com um dos valores: cnae, razao-social, socio.",
     );
+  }
+
+  private getRequiredCnaeCodes(filters: Record<string, unknown>): string {
+    const rawCodes = filters.codigosCnae;
+
+    if (Array.isArray(rawCodes)) {
+      const codes = rawCodes
+        .filter((code): code is string => typeof code === "string")
+        .map((code) => code.trim())
+        .filter(Boolean)
+        .join(",");
+
+      if (codes) {
+        return codes;
+      }
+    }
+
+    if (typeof rawCodes === "string" && rawCodes.trim()) {
+      return rawCodes.trim();
+    }
+
+    throw new LeadSourceConfigurationError(
+      "No lead source cnpj-api, codigosCnae é obrigatório para searchType=cnae.",
+    );
+  }
+
+  private getRequiredTextFilter(
+    value: unknown,
+    fieldName: "razaoSocial" | "nomeSocio",
+    searchType: CnpjApiSearchType,
+  ): string {
+    const text = typeof value === "string" ? value.trim() : "";
+
+    if (text.length < MIN_TEXT_SEARCH_LENGTH) {
+      throw new LeadSourceConfigurationError(
+        `No lead source cnpj-api, ${fieldName} deve conter ao menos ${MIN_TEXT_SEARCH_LENGTH} caracteres úteis para searchType=${searchType}.`,
+      );
+    }
+
+    return text;
+  }
+
+  private buildUrl(filters: CnpjApiFilters, baseUrl: string): URL {
+    const url = new URL(this.getPathBySearchType(filters.searchType), baseUrl);
+
+    Object.entries(this.buildQuery(filters)).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    });
+
+    return url;
   }
 
   private getPathBySearchType(searchType: CnpjApiSearchType): string {
@@ -90,147 +204,237 @@ export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
     }
   }
 
-  private buildQuery(
-    searchType: CnpjApiSearchType,
-    input: ResolveRecipientsInput,
-  ): Record<string, string | number | undefined> {
-    const filters = input.filters;
-    const uf = typeof filters.uf === "string" ? filters.uf.trim() : undefined;
-    const municipio = typeof filters.municipio === "string" ? filters.municipio.trim() : undefined;
-    const rawPage = typeof filters.page === "number" ? filters.page : typeof input.page === "number" ? input.page : 1;
-    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
-
-    if (municipio && !uf) {
-      throw new Error("No lead source cnpj-api, municipio exige uf.");
-    }
-
-    const baseQuery = {
-      uf,
-      municipio,
-      page,
-      limit: input.limit,
+  private buildQuery(filters: CnpjApiFilters): CnpjApiQuery {
+    const baseQuery: CnpjApiQuery = {
+      page: filters.page,
+      limit: filters.limit,
+      uf: filters.uf,
+      municipio: filters.municipio,
     };
 
-    switch (searchType) {
-      case "cnae": {
-        const codigosCnae = Array.isArray(filters.codigosCnae)
-          ? filters.codigosCnae.map((value) => String(value).trim()).filter(Boolean).join(",")
-          : typeof filters.codigosCnae === "string"
-            ? filters.codigosCnae.trim()
-            : undefined;
-
-        if (!codigosCnae) {
-          throw new Error("No lead source cnpj-api, codigosCnae é obrigatório para mode=cnae.");
-        }
-
+    switch (filters.searchType) {
+      case "cnae":
         return {
           ...baseQuery,
-          codigosCnae,
+          codigosCnae: filters.codigosCnae,
         };
-      }
 
-      case "razao-social": {
-        const razaoSocial = typeof filters.razaoSocial === "string" ? filters.razaoSocial.trim() : "";
-
-        if (razaoSocial.length < 3) {
-          throw new Error(
-            "No lead source cnpj-api, razaoSocial deve ter ao menos 3 caracteres úteis para mode=razao-social.",
-          );
-        }
-
+      case "razao-social":
         return {
           ...baseQuery,
-          razaoSocial,
+          razaoSocial: filters.razaoSocial,
         };
-      }
 
-      case "socio": {
-        const nomeSocio = typeof filters.nomeSocio === "string" ? filters.nomeSocio.trim() : "";
-
-        if (nomeSocio.length < 3) {
-          throw new Error(
-            "No lead source cnpj-api, nomeSocio deve ter ao menos 3 caracteres úteis para mode=socio.",
-          );
-        }
-
+      case "socio":
         return {
           ...baseQuery,
-          nomeSocio,
+          nomeSocio: filters.nomeSocio,
         };
-      }
     }
   }
 
+  private async fetchCnpjApi(url: URL): Promise<unknown> {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      env.CNPJ_API_TIMEOUT_MS,
+    );
+
+    // TODO - adicionar logs mais detalhados.
+    console.log("[CNPJ API URL]", url.toString());
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          ...(env.CNPJ_API_TOKEN
+            ? { authorization: `Bearer ${env.CNPJ_API_TOKEN}` }
+            : {}),
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const responseBody = await response.text().catch(() => "");
+        throw new LeadSourceRequestError(
+          `CNPJ API respondeu com status ${response.status}.${responseBody ? ` Detalhes: ${responseBody.slice(0, 300)}` : ""}`,
+        );
+      }
+
+      const payload = (await response.json()) as unknown;
+
+      console.log(
+        "[CNPJ API PAYLOAD]",
+        JSON.stringify(payload, null, 2),
+      );
+
+      return payload;
+    } catch (error) {
+      if (error instanceof LeadSourceRequestError) {
+        throw error;
+      }
+
+      throw new LeadSourceRequestError(
+        `Falha ao consultar CNPJ API em ${url.pathname}. Verifique CNPJ_API_BASE_URL, disponibilidade da API e filtros informados.`,
+        error,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private getOptionalString(value: unknown): string | undefined {
+    if (typeof value !== "string") {
+      return undefined;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  private getPositiveInteger(value: unknown): number | undefined {
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+
+    if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+      const parsed = Number(value);
+      return parsed > 0 ? parsed : undefined;
+    }
+
+    return undefined;
+  }
+
   private extractItems(payload: unknown): RawCnpjApiItem[] {
-    if (Array.isArray(payload)) {
-      return payload as RawCnpjApiItem[];
+    if (typeof payload !== "object" || payload === null) {
+      return [];
     }
 
-    if (typeof payload === "object" && payload !== null) {
-      const maybePayload = payload as { items?: unknown; data?: unknown; results?: unknown };
+    const response = payload as {
+      dados?: {
+        dados?: unknown;
+      };
+    };
 
-      if (Array.isArray(maybePayload.items)) {
-        return maybePayload.items as RawCnpjApiItem[];
-      }
-
-      if (Array.isArray(maybePayload.data)) {
-        return maybePayload.data as RawCnpjApiItem[];
-      }
-
-      if (Array.isArray(maybePayload.results)) {
-        return maybePayload.results as RawCnpjApiItem[];
-      }
+    if (!Array.isArray(response.dados?.dados)) {
+      return [];
     }
 
-    return [];
+    return response.dados.dados as RawCnpjApiItem[];
   }
 
   private mapItem(item: RawCnpjApiItem): LeadRecipient | null {
     if (typeof item === "string") {
-      const email = item.trim();
-
-      if (!email) {
-        return null;
-      }
-
-      return {
-        email,
-        externalId: null,
-        sourceType: this.sourceType,
-        metadata: {},
-      };
+      return this.mapEmailString(item);
     }
 
-    const email =
-      typeof item.email === "string"
-        ? item.email.trim()
-        : Array.isArray(item.emails) && typeof item.emails[0] === "string"
-          ? item.emails[0].trim()
-          : "";
+    const email = this.extractEmail(item);
+
+    // TODO - Descomentar quando a propriedade email voltar a ser obrigatória.
+    // if (!email) {
+    //   return null;
+    // }
+
+    return {
+      email,
+      externalId: this.extractExternalId(item),
+      sourceType: this.sourceType,
+      metadata: this.extractMetadata(item),
+    };
+  }
+
+  private mapEmailString(value: string): LeadRecipient | null {
+    const email = value.trim();
 
     if (!email) {
       return null;
     }
 
-    const { externalId, id, cnpj, cnpjCompleto, metadata, ...rest } = item;
-
     return {
       email,
-      externalId:
-        typeof externalId === "string"
-          ? externalId
-          : typeof id === "string"
-            ? id
-            : typeof cnpjCompleto === "string"
-              ? cnpjCompleto
-              : typeof cnpj === "string"
-                ? cnpj
-                : null,
+      externalId: null,
       sourceType: this.sourceType,
-      metadata:
-        typeof metadata === "object" && metadata !== null
-          ? { ...(metadata as Record<string, unknown>), ...rest }
-          : rest,
+      metadata: {},
     };
+  }
+
+  private extractEmail(item: Exclude<RawCnpjApiItem, string>): string | null {
+    const directEmailCandidates = [
+      item.email,
+      item.correioEletronico,
+      item.emailPrincipal,
+      item.contactEmail,
+    ];
+
+    const directEmail = directEmailCandidates.find(
+      (candidate): candidate is string =>
+        typeof candidate === "string" && candidate.trim().length > 0,
+    );
+
+    if (directEmail) {
+      return directEmail.trim();
+    }
+
+    if (Array.isArray(item.emails)) {
+      const emailFromArray = item.emails.find(
+        (candidate): candidate is string =>
+          typeof candidate === "string" && candidate.trim().length > 0,
+      );
+
+      return emailFromArray?.trim() ?? null;
+    }
+
+    return null;
+  }
+
+  private extractExternalId(
+    item: Exclude<RawCnpjApiItem, string>,
+  ): string | null {
+    const candidates = [
+      item.externalId,
+      item.id,
+      item.cnpjCompleto,
+      item.cnpjFull,
+      item.cnpj,
+    ];
+
+    const externalId = candidates.find(
+      (candidate): candidate is string =>
+        typeof candidate === "string" && candidate.trim().length > 0,
+    );
+
+    return externalId?.trim() ?? null;
+  }
+
+  private extractMetadata(
+    item: Exclude<RawCnpjApiItem, string>,
+  ): Record<string, unknown> {
+    const reservedKeys = new Set([
+      "email",
+      "emails",
+      "correioEletronico",
+      "emailPrincipal",
+      "contactEmail",
+      "externalId",
+      "id",
+      "cnpj",
+      "cnpjCompleto",
+      "cnpjFull",
+      "metadata",
+    ]);
+
+    const metadata: Record<string, unknown> =
+      typeof item.metadata === "object" && item.metadata !== null
+        ? { ...(item.metadata as Record<string, unknown>) }
+        : {};
+
+    Object.entries(item).forEach(([key, value]) => {
+      if (!reservedKeys.has(key)) {
+        metadata[key] = value;
+      }
+    });
+
+    return metadata;
   }
 }

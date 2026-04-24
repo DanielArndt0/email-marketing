@@ -12,7 +12,6 @@ export type ResolveAudienceInput = {
   sourceType: LeadSourceType;
   filters: Record<string, unknown>;
   limit?: number | undefined;
-  page?: number | undefined;
 };
 
 export type ResolveAudienceResult = {
@@ -20,30 +19,47 @@ export type ResolveAudienceResult = {
   count: number;
   sourceType: LeadSourceType;
   requestedLimit: number;
-  requestedPage: number;
 };
+
+function getPositiveInteger(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const parsed = Number(value);
+    return parsed > 0 ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function resolveRequestedLimit(input: ResolveAudienceInput): number {
+  const configuredLimit =
+    input.limit ??
+    getPositiveInteger(input.filters.limit) ??
+    systemConfig.api.preview.defaultRecipientsLimit;
+
+  return Math.min(configuredLimit, systemConfig.api.preview.maxRecipientsLimit);
+}
 
 export async function resolveAudience(
   dependencies: ResolveAudienceDependencies,
   input: ResolveAudienceInput,
 ): Promise<ResolveAudienceResult> {
-  const limit = input.limit ?? systemConfig.api.preview.defaultRecipientsLimit;
-  const boundedLimit = Math.min(limit, systemConfig.api.preview.maxRecipientsLimit);
+  const requestedLimit = resolveRequestedLimit(input);
   const sourceType = parseLeadSourceType(input.sourceType);
-  const page = typeof input.page === "number" && input.page > 0 ? Math.trunc(input.page) : 1;
-
   const provider = dependencies.providerRegistry.get(sourceType);
+
   const items = await provider.resolveRecipients({
     filters: input.filters,
-    limit: boundedLimit,
-    page,
+    limit: requestedLimit,
   });
 
   return {
     items,
     count: items.length,
     sourceType,
-    requestedLimit: boundedLimit,
-    requestedPage: page,
+    requestedLimit,
   };
 }

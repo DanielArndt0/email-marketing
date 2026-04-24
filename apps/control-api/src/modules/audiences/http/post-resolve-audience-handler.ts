@@ -4,12 +4,11 @@ import { z } from "zod";
 
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
 import { resolveAudience } from "../application/resolve-audience.js";
+import { sendAudienceResolutionError } from "./audience-error-response.js";
 
 const requestBodySchema = z.object({
   sourceType: z.enum(LEAD_SOURCE_TYPES),
   filters: z.record(z.string(), z.unknown()).default({}),
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
 type CreatePostResolveAudienceHandlerDependencies = {
@@ -29,9 +28,13 @@ export function createPostResolveAudienceHandler(
       const result = await resolveAudience(dependencies, body);
       return reply.status(200).send(result);
     } catch (error) {
-      return reply.status(400).send({
-        message: error instanceof Error ? error.message : "Falha ao resolver audience.",
-      });
+      const handledError = sendAudienceResolutionError(reply, error);
+
+      if (handledError) {
+        return handledError;
+      }
+
+      throw error;
     }
   };
 }

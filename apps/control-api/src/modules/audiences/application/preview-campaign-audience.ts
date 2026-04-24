@@ -1,18 +1,16 @@
 import type { Pool } from "pg";
-import { systemConfig } from "shared";
 
+import { findCampaignAudienceLinkById } from "../../campaigns/repositories/campaign-repository.js";
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
 import { findAudienceById } from "../repositories/audience-repository.js";
-import { resolveAudience, type ResolveAudienceResult } from "./resolve-audience.js";
+import {
+  resolveAudience,
+  type ResolveAudienceResult,
+} from "./resolve-audience.js";
 
 type PreviewCampaignAudienceDependencies = {
   pgPool: Pool;
   providerRegistry: LeadSourceProviderRegistry;
-};
-
-type RawCampaignAudienceRow = {
-  campaignId: string;
-  audienceId: string | null;
 };
 
 export type PreviewCampaignAudienceResult =
@@ -29,21 +27,12 @@ export type PreviewCampaignAudienceResult =
 
 export async function previewCampaignAudience(
   dependencies: PreviewCampaignAudienceDependencies,
-  input: { campaignId: string; limit?: number | undefined; page?: number | undefined },
+  input: { campaignId: string },
 ): Promise<PreviewCampaignAudienceResult> {
-  const campaignResult = await dependencies.pgPool.query<RawCampaignAudienceRow>(
-    `
-      SELECT
-        id AS "campaignId",
-        audience_id AS "audienceId"
-      FROM campaigns
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [input.campaignId],
+  const campaign = await findCampaignAudienceLinkById(
+    dependencies.pgPool,
+    input.campaignId,
   );
-
-  const campaign = campaignResult.rows[0];
 
   if (!campaign) {
     return { kind: "campaign_not_found" };
@@ -53,7 +42,10 @@ export async function previewCampaignAudience(
     return { kind: "campaign_without_audience" };
   }
 
-  const audience = await findAudienceById(dependencies.pgPool, campaign.audienceId);
+  const audience = await findAudienceById(
+    dependencies.pgPool,
+    campaign.audienceId,
+  );
 
   if (!audience) {
     return { kind: "audience_not_found" };
@@ -66,8 +58,6 @@ export async function previewCampaignAudience(
     {
       sourceType: audience.sourceType as never,
       filters: audience.filters,
-      limit: input.limit ?? systemConfig.api.preview.defaultRecipientsLimit,
-      page: input.page ?? 1,
     },
   );
 

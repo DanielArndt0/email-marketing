@@ -13,7 +13,6 @@ import {
   audienceCreateBodySchema,
   audienceListSchema,
   audienceParamsSchema,
-  audiencePreviewQuerySchema,
   audiencePreviewSchema,
   audienceRecordSchema,
   audienceResolveBodySchema,
@@ -100,6 +99,7 @@ const resolveAudienceRouteSchema = {
   response: {
     200: audiencePreviewSchema,
     400: messageSchema,
+    502: messageSchema,
   },
 } satisfies FastifySchema;
 
@@ -107,11 +107,11 @@ const previewAudienceRouteSchema = {
   tags: ["audiences"],
   summary: "Gera preview de uma audience persistida",
   params: audienceParamsSchema,
-  querystring: audiencePreviewQuerySchema,
   response: {
     200: audiencePreviewSchema,
     400: messageSchema,
     404: messageSchema,
+    502: messageSchema,
   },
 } satisfies FastifySchema;
 

@@ -5,7 +5,6 @@ import type { LeadSourceType } from "./lead-source-type.js";
 export type ResolveRecipientsInput = {
   filters: AudienceFilters;
   limit: number;
-  page?: number | undefined;
 };
 
 export interface LeadSourceProvider {

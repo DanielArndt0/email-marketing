@@ -1,4 +1,8 @@
-import type { LeadRecipient, LeadSourceProvider, ResolveRecipientsInput } from "core";
+import type {
+  LeadRecipient,
+  LeadSourceProvider,
+  ResolveRecipientsInput,
+} from "core";
 
 type ManualRecipientInput =
   | string
@@ -12,7 +16,9 @@ type ManualRecipientInput =
 export class ManualListLeadSourceProvider implements LeadSourceProvider {
   readonly sourceType = "manual-list" as const;
 
-  async resolveRecipients(input: ResolveRecipientsInput): Promise<LeadRecipient[]> {
+  async resolveRecipients(
+    input: ResolveRecipientsInput,
+  ): Promise<LeadRecipient[]> {
     const recipients = this.extractRecipients(input.filters);
 
     return recipients
@@ -21,7 +27,9 @@ export class ManualListLeadSourceProvider implements LeadSourceProvider {
       .slice(0, input.limit);
   }
 
-  private extractRecipients(filters: Record<string, unknown>): ManualRecipientInput[] {
+  private extractRecipients(
+    filters: Record<string, unknown>,
+  ): ManualRecipientInput[] {
     if (Array.isArray(filters.recipients)) {
       return filters.recipients as ManualRecipientInput[];
     }

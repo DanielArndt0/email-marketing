@@ -20,7 +20,10 @@ import {
   notFoundMessageSchema,
   updateCampaignBodySchema,
 } from "../schemas/campaign-schemas.js";
-import { audiencePreviewQuerySchema, audiencePreviewSchema, messageSchema } from "../schemas/audience-schemas.js";
+import {
+  audiencePreviewSchema,
+  messageSchema,
+} from "../schemas/audience-schemas.js";
 
 type RegisterCampaignsRouteDependencies = {
   pgPool: Pool;
@@ -74,12 +77,12 @@ const previewCampaignAudienceRouteSchema = {
   tags: ["campaigns"],
   summary: "Gera preview da audience vinculada à campaign",
   params: campaignParamsSchema,
-  querystring: audiencePreviewQuerySchema,
   response: {
     200: audiencePreviewSchema,
     400: messageSchema,
     404: messageSchema,
     409: messageSchema,
+    502: messageSchema,
   },
 } satisfies FastifySchema;
 

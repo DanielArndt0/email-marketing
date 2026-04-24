@@ -4,14 +4,10 @@ import { z } from "zod";
 
 import type { LeadSourceProviderRegistry } from "../adapters/lead-source-provider-registry.js";
 import { previewAudience } from "../application/preview-audience.js";
+import { sendAudienceResolutionError } from "./audience-error-response.js";
 
 const requestParamsSchema = z.object({
   id: z.string().min(1),
-});
-
-const requestQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
 type CreateGetPreviewAudienceHandlerDependencies = {
@@ -27,13 +23,10 @@ export function createGetPreviewAudienceHandler(
     reply: FastifyReply,
   ) {
     const params = requestParamsSchema.parse(request.params);
-    const query = requestQuerySchema.parse(request.query);
 
     try {
       const result = await previewAudience(dependencies, {
         audienceId: params.id,
-        page: query.page,
-        limit: query.limit,
       });
 
       if (result.kind === "not_found") {
@@ -44,9 +37,13 @@ export function createGetPreviewAudienceHandler(
 
       return reply.status(200).send(result.preview);
     } catch (error) {
-      return reply.status(400).send({
-        message: error instanceof Error ? error.message : "Falha ao gerar preview da audience.",
-      });
+      const handledError = sendAudienceResolutionError(reply, error);
+
+      if (handledError) {
+        return handledError;
+      }
+
+      throw error;
     }
   };
 }

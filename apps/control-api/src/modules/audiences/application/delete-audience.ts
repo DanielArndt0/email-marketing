@@ -25,7 +25,10 @@ export async function deleteAudience(
     return { kind: "not_found" };
   }
 
-  const campaignsCount = await countAudienceCampaignLinks(dependencies.pgPool, id);
+  const campaignsCount = await countAudienceCampaignLinks(
+    dependencies.pgPool,
+    id,
+  );
 
   if (campaignsCount > 0) {
     return {
