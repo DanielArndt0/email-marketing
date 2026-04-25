@@ -26,16 +26,6 @@ export type ListCnpjApiDomainResult = {
 
 type RawCnpjApiDomainItem = Record<string, unknown>;
 
-type RawCnpjApiDomainPayload = {
-  sucesso?: boolean;
-  dados?: {
-    pagina?: unknown;
-    limite?: unknown;
-    dados?: unknown;
-    hasNextPage?: unknown;
-  };
-};
-
 export class CnpjApiDomainClient {
   async listDomain(
     input: ListCnpjApiDomainInput,
@@ -118,7 +108,15 @@ export class CnpjApiDomainClient {
         );
       }
 
-      return (await response.json()) as unknown;
+      const payload = (await response.json()) as unknown;
+
+      console.log("[CNPJ API DOMAIN URL]", url.toString());
+      console.log(
+        "[CNPJ API DOMAIN PAYLOAD]",
+        JSON.stringify(payload, null, 2),
+      );
+
+      return payload;
     } catch (error) {
       if (error instanceof CnpjApiDomainRequestError) {
         throw error;
@@ -148,7 +146,17 @@ export class CnpjApiDomainClient {
       );
     }
 
-    const response = payload as RawCnpjApiDomainPayload;
+    const response = payload as {
+      sucesso?: boolean;
+      dados?: {
+        resultado?: {
+          pagina?: unknown;
+          limite?: unknown;
+          totalPaginas?: unknown;
+          dados?: unknown;
+        };
+      };
+    };
 
     if (response.sucesso === false) {
       throw new CnpjApiDomainRequestError(
@@ -156,19 +164,29 @@ export class CnpjApiDomainClient {
       );
     }
 
-    const rawItems = response.dados?.dados;
+    const result = response.dados?.resultado;
 
-    if (!Array.isArray(rawItems)) {
+    if (!result) {
       throw new CnpjApiDomainRequestError(
-        `Resposta da CNPJ API para o domínio ${domain} não contém dados.dados como array.`,
+        `Resposta da CNPJ API para o domínio ${domain} não contém resultado.`,
       );
     }
 
+    if (!Array.isArray(result.dados)) {
+      throw new CnpjApiDomainRequestError(
+        `Resposta da CNPJ API para o domínio ${domain} não contém resultado.dados como array.`,
+      );
+    }
+
+    const page = this.getOptionalInteger(result.pagina);
+    const limit = this.getOptionalInteger(result.limite);
+    const totalPages = this.getOptionalInteger(result.totalPaginas);
+
     return {
-      page: this.getOptionalInteger(response.dados?.pagina),
-      limit: this.getOptionalInteger(response.dados?.limite),
-      hasNextPage: response.dados?.hasNextPage === true,
-      items: rawItems.filter(
+      page,
+      limit,
+      hasNextPage: page !== null && totalPages !== null && page < totalPages,
+      items: result.dados.filter(
         (item): item is RawCnpjApiDomainItem =>
           typeof item === "object" && item !== null,
       ),
