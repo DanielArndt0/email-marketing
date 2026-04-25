@@ -1,10 +1,12 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 
 import {
   createEmailDispatchQueue,
   createLogger,
   createPgPool,
   createRedisConnection,
+  parseCorsOrigins,
   env,
 } from "shared";
 
@@ -23,6 +25,24 @@ const providerRegistry = createLeadSourceProviderRegistry();
 
 const app = Fastify({
   logger: false,
+});
+
+await app.register(cors, {
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (parseCorsOrigins(env.CORS_ORIGINS).includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Origin not allowed by CORS"), false);
+  },
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 });
 
 await registerOpenApi(app);

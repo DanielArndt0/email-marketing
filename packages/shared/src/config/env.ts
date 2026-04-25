@@ -61,6 +61,7 @@ const environmentSchema = z.object({
     .default("info"),
 
   API_PORT: z.coerce.number().int().positive().default(3333),
+  CORS_ORIGINS: z.string().default("http://localhost:3000"),
 
   POSTGRES_HOST: z.string().default("localhost"),
   POSTGRES_PORT: z.coerce.number().int().positive().default(5432),
