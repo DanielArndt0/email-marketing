@@ -34,6 +34,10 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
         },
         { name: "templates", description: "Gestão de templates" },
         {
+          name: "domains",
+          description: "Domínios externos para filtros e autocompletes",
+        },
+        {
           name: "audiences",
           description: "Gestão e preview de audiences e lead sources",
         },

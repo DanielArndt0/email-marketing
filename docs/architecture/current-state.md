@@ -66,6 +66,7 @@ O arquivo JSON centraliza, neste momento:
 - nomes de fila
 - nomes de job
 - fallback de conteúdo textual para envio
+- paths da CNPJ API para lead sources e domínios auxiliares
 
 ## Módulos existentes
 
@@ -83,6 +84,14 @@ Responsável pelo gerenciamento inicial de campanhas, incluindo:
 - definição de audiência por origem e filtros;
 - persistência de dados operacionais básicos da campanha;
 - enfileiramento de dispatches para execução assíncrona.
+
+### Audiences
+
+Responsável por audiences persistidas, resolução de destinatários por lead source e previews operacionais.
+
+### Domains
+
+Responsável por expor domínios auxiliares da CNPJ API, como CNAEs e cidades, em formato padronizado para o front-end.
 
 ### Email Dispatches
 

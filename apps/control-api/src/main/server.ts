@@ -6,8 +6,8 @@ import {
   createLogger,
   createPgPool,
   createRedisConnection,
-  parseCorsOrigins,
   env,
+  parseCorsOrigins,
 } from "shared";
 
 import { createLeadSourceProviderRegistry } from "../modules/audiences/adapters/lead-source-provider-registry.js";
@@ -27,20 +27,25 @@ const app = Fastify({
   logger: false,
 });
 
+const allowedOrigins = parseCorsOrigins(env.CORS_ORIGINS);
+
 await app.register(cors, {
-  origin(origin, callback) {
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
+  origin:
+    env.NODE_ENV === "development"
+      ? true
+      : (origin, callback) => {
+          if (!origin) {
+            callback(null, true);
+            return;
+          }
 
-    if (parseCorsOrigins(env.CORS_ORIGINS).includes(origin)) {
-      callback(null, true);
-      return;
-    }
+          if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+          }
 
-    callback(new Error("Origin not allowed by CORS"), false);
-  },
+          callback(new Error("Origin not allowed by CORS"), false);
+        },
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });

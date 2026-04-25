@@ -1,7 +1,9 @@
 import type { Pool } from "pg";
 
-import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
+import type { TemplateVariable } from "core";
+
 import { updateTemplateById } from "../repositories/template-repository.js";
+import { mapTemplateRow, type TemplateRecord } from "./shared.js";
 
 type UpdateTemplateDependencies = {
   pgPool: Pool;
@@ -13,6 +15,7 @@ export type UpdateTemplateInput = {
   subject?: string | undefined;
   htmlContent?: string | null | undefined;
   textContent?: string | null | undefined;
+  variables?: TemplateVariable[] | undefined;
 };
 
 export type UpdateTemplateResult =
@@ -21,15 +24,7 @@ export type UpdateTemplateResult =
     }
   | {
       kind: "updated";
-      template: {
-        id: string;
-        name: string;
-        subject: string;
-        htmlContent: string | null;
-        textContent: string | null;
-        createdAt: string;
-        updatedAt: string;
-      };
+      template: TemplateRecord;
     };
 
 export async function updateTemplate(
@@ -46,14 +41,6 @@ export async function updateTemplate(
 
   return {
     kind: "updated",
-    template: {
-      id: row.id,
-      name: row.name,
-      subject: row.subject,
-      htmlContent: row.htmlContent,
-      textContent: row.textContent,
-      createdAt: normalizeDateValue(row.createdAt) ?? "",
-      updatedAt: normalizeDateValue(row.updatedAt) ?? "",
-    },
+    template: mapTemplateRow(row),
   };
 }

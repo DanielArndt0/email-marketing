@@ -9,7 +9,8 @@ Atualmente, ela concentra:
 - email dispatches;
 - campaigns;
 - audiences;
-- preview de audiences por source type ou por campaign.
+- preview de audiences por source type ou por campaign;
+- domínios externos da CNPJ API para filtros e autocompletes.
 
 ## Papel
 
@@ -19,6 +20,7 @@ A API serve como porta de entrada para:
 - cadastrar audiences persistidas;
 - vincular audiences a campaigns;
 - consultar previews de destinatários antes da execução;
+- consultar domínios auxiliares da CNPJ API para apoiar o front-end;
 - registrar dispatches e enfileirar envios.
 
 ## Destaques atuais
@@ -46,6 +48,10 @@ No estado atual, o sistema possui adapters para:
 - `cnpj-api`
 - `csv-import`
 - `manual-list`
+
+### Domínios da CNPJ API
+
+A API expõe endpoints de apoio para consultar CNAEs e cidades da CNPJ API, retornando uma estrutura padronizada com `code` e `description` para uso no front-end.
 
 ## OpenAPI / Swagger
 

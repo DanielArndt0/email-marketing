@@ -3,6 +3,7 @@ import {
   parseLeadSourceType,
   type AudienceDefinition,
   type CampaignStatus,
+  type TemplateVariableMappings,
 } from "core";
 
 import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
@@ -16,6 +17,7 @@ export type CampaignRecord = {
   goal: string | null;
   status: CampaignStatus;
   templateId: string | null;
+  templateVariableMappings: TemplateVariableMappings;
   audienceId: string | null;
   audience:
     | ({
@@ -73,6 +75,14 @@ function toAudienceRecord(row: RawCampaignRow): CampaignRecord["audience"] {
   };
 }
 
+function toTemplateVariableMappings(value: unknown): TemplateVariableMappings {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as TemplateVariableMappings;
+}
+
 export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
   return {
     id: row.id,
@@ -81,6 +91,9 @@ export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
     goal: row.goal,
     status: toCampaignStatus(row.status),
     templateId: row.templateId,
+    templateVariableMappings: toTemplateVariableMappings(
+      row.templateVariableMappings,
+    ),
     audienceId: row.audienceId,
     audience: toAudienceRecord(row),
     scheduleAt: normalizeDateValue(row.scheduleAt),

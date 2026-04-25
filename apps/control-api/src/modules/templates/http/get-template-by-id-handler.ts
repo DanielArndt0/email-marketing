@@ -1,12 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
-import { z } from "zod";
 
 import { getTemplateById } from "../application/get-template-by-id.js";
-
-const requestParamsSchema = z.object({
-  id: z.string().min(1),
-});
+import { templateParamsSchema } from "./template-schema.js";
 
 type CreateGetTemplateByIdHandlerDependencies = {
   pgPool: Pool;
@@ -19,7 +15,7 @@ export function createGetTemplateByIdHandler(
     request: FastifyRequest,
     reply: FastifyReply,
   ) {
-    const params = requestParamsSchema.parse(request.params);
+    const params = templateParamsSchema.parse(request.params);
 
     const template = await getTemplateById(dependencies, params.id);
 

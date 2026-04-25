@@ -9,6 +9,7 @@ import type { LeadSourceProviderRegistry } from "../../modules/audiences/adapter
 import { registerAudiencesRoute } from "./audiences-route.js";
 import { registerCampaignsRoute } from "./campaigns-route.js";
 import { registerEmailDispatchesRoute } from "./email-dispatches-route.js";
+import { registerDomainsRoute } from "./domains-route.js";
 import { registerHealthRoute } from "./health-route.js";
 import { registerTemplatesRoute } from "./templates-route.js";
 
@@ -38,6 +39,8 @@ export function registerRoutes(
     pgPool: dependencies.pgPool,
     providerRegistry: dependencies.providerRegistry,
   });
+
+  registerDomainsRoute(app);
 
   registerEmailDispatchesRoute(app, {
     pgPool: dependencies.pgPool,

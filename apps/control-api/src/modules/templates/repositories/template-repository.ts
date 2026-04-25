@@ -2,26 +2,32 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
+import type { TemplateVariable } from "core";
+
 export type RawTemplateRow = {
   id: string;
   name: string;
   subject: string;
   htmlContent: string | null;
   textContent: string | null;
+  variables: unknown;
   createdAt: Date | string;
   updatedAt: Date | string;
 };
 
 type CountRow = { total: string };
 
+type TemplateMutationInput = {
+  name: string;
+  subject: string;
+  htmlContent?: string | undefined;
+  textContent?: string | undefined;
+  variables?: TemplateVariable[] | undefined;
+};
+
 export async function insertTemplate(
   pgPool: Pool,
-  input: {
-    name: string;
-    subject: string;
-    htmlContent?: string | undefined;
-    textContent?: string | undefined;
-  },
+  input: TemplateMutationInput,
 ): Promise<RawTemplateRow> {
   const id = randomUUID();
 
@@ -32,15 +38,17 @@ export async function insertTemplate(
         name,
         subject,
         html_content,
-        text_content
+        text_content,
+        variables
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb)
       RETURNING
         id,
         name,
         subject,
         html_content AS "htmlContent",
         text_content AS "textContent",
+        variables,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
     `,
@@ -50,6 +58,7 @@ export async function insertTemplate(
       input.subject,
       input.htmlContent ?? null,
       input.textContent ?? null,
+      JSON.stringify(input.variables ?? []),
     ],
   );
 
@@ -77,6 +86,7 @@ export async function listTemplatesPage(
         subject,
         html_content AS "htmlContent",
         text_content AS "textContent",
+        variables,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM templates
@@ -105,6 +115,7 @@ export async function findTemplateById(
         subject,
         html_content AS "htmlContent",
         text_content AS "textContent",
+        variables,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM templates
@@ -125,6 +136,7 @@ export async function updateTemplateById(
     subject?: string | undefined;
     htmlContent?: string | null | undefined;
     textContent?: string | null | undefined;
+    variables?: TemplateVariable[] | undefined;
   },
 ): Promise<RawTemplateRow | null> {
   const fields: string[] = [];
@@ -150,6 +162,11 @@ export async function updateTemplateById(
     fields.push(`text_content = $${values.length}`);
   }
 
+  if (input.variables !== undefined) {
+    values.push(JSON.stringify(input.variables));
+    fields.push(`variables = $${values.length}::jsonb`);
+  }
+
   fields.push(`updated_at = NOW()`);
   values.push(input.id);
 
@@ -164,6 +181,7 @@ export async function updateTemplateById(
         subject,
         html_content AS "htmlContent",
         text_content AS "textContent",
+        variables,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
     `,

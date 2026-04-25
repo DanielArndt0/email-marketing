@@ -213,3 +213,83 @@ O adapter `cnpj-api` usa as rotas especializadas de prospecção da CNPJ API:
 - `GET /api/listas/empresas/socio`
 
 Essas rotas trabalham com query string, não com body. Por isso, o provider monta a URL final com `page`, `limit`, `uf`, `municipio` e o campo principal de cada modo.
+
+---
+
+## Domains
+
+Os endpoints de `domains` funcionam como proxy controlado para tabelas auxiliares da CNPJ API usadas pelo front-end em filtros, selects e autocompletes.
+
+A Control API não persiste esses domínios localmente neste momento. Ela consulta a CNPJ API usando `CNPJ_API_BASE_URL` e retorna uma resposta padronizada com `code` e `description`.
+
+### `GET /domains/cnpj-api/cnaes`
+
+Lista CNAEs da CNPJ API.
+
+#### Query params
+
+- `page`: opcional, padrão `1`.
+- `limit`: opcional, padrão `20`, máximo `100`.
+- `q`: opcional, busca textual leve.
+- `code`: opcional, código exato quando suportado pela CNPJ API.
+
+#### Exemplo
+
+```http
+GET /domains/cnpj-api/cnaes?page=1&limit=20&q=software
+```
+
+#### Resposta
+
+```json
+{
+  "domain": "cnaes",
+  "page": 1,
+  "limit": 20,
+  "count": 1,
+  "hasNextPage": false,
+  "items": [
+    {
+      "code": "6201501",
+      "description": "Desenvolvimento de programas de computador sob encomenda"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /domains/cnpj-api/cities`
+
+Lista cidades da CNPJ API.
+
+#### Query params
+
+- `page`: opcional, padrão `1`.
+- `limit`: opcional, padrão `20`, máximo `100`.
+- `q`: opcional, busca textual leve.
+- `code`: opcional, código exato quando suportado pela CNPJ API.
+
+#### Exemplo
+
+```http
+GET /domains/cnpj-api/cities?page=1&limit=20&q=londrina
+```
+
+#### Resposta
+
+```json
+{
+  "domain": "cities",
+  "page": 1,
+  "limit": 20,
+  "count": 1,
+  "hasNextPage": false,
+  "items": [
+    {
+      "code": "4113700",
+      "description": "Londrina"
+    }
+  ]
+}
+```

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
+import type { TemplateVariableMappings } from "core";
+
 type CountRow = { total: string };
 
 export type RawCampaignRow = {
@@ -11,6 +13,7 @@ export type RawCampaignRow = {
   subject: string | null;
   status: string;
   templateId: string | null;
+  templateVariableMappings: unknown;
   audienceId: string | null;
   audienceName: string | null;
   audienceDescription: string | null;
@@ -31,12 +34,13 @@ export async function insertCampaign(
     status: string;
     templateId?: string | null | undefined;
     audienceId?: string | null | undefined;
+    templateVariableMappings?: TemplateVariableMappings | undefined;
     scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow> {
   const id = randomUUID();
 
-  const result = await pgPool.query<RawCampaignRow>(
+  const result = await pgPool.query<{ id: string }>(
     `
       INSERT INTO campaigns (
         id,
@@ -46,21 +50,11 @@ export async function insertCampaign(
         status,
         template_id,
         audience_id,
+        template_variable_mappings,
         schedule_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING
-        id,
-        name,
-        goal,
-        subject,
-        status,
-        template_id AS "templateId",
-        audience_id AS "audienceId",
-        schedule_at AS "scheduleAt",
-        last_execution_at AS "lastExecutionAt",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+      RETURNING id
     `,
     [
       id,
@@ -70,6 +64,7 @@ export async function insertCampaign(
       input.status,
       input.templateId ?? null,
       input.audienceId ?? null,
+      JSON.stringify(input.templateVariableMappings ?? {}),
       input.scheduleAt ?? null,
     ],
   );
@@ -126,6 +121,7 @@ export async function listCampaignsPage(
         c.subject,
         c.status,
         c.template_id AS "templateId",
+        c.template_variable_mappings AS "templateVariableMappings",
         c.audience_id AS "audienceId",
         a.name AS "audienceName",
         a.description AS "audienceDescription",
@@ -164,6 +160,7 @@ export async function findCampaignById(
         c.subject,
         c.status,
         c.template_id AS "templateId",
+        c.template_variable_mappings AS "templateVariableMappings",
         c.audience_id AS "audienceId",
         a.name AS "audienceName",
         a.description AS "audienceDescription",
@@ -194,6 +191,7 @@ export async function updateCampaignById(
     status?: string | undefined;
     templateId?: string | null | undefined;
     audienceId?: string | null | undefined;
+    templateVariableMappings?: TemplateVariableMappings | undefined;
     scheduleAt?: string | null | undefined;
   },
 ): Promise<RawCampaignRow | null> {
@@ -228,6 +226,11 @@ export async function updateCampaignById(
   if (input.audienceId !== undefined) {
     values.push(input.audienceId);
     fields.push(`audience_id = $${values.length}`);
+  }
+
+  if (input.templateVariableMappings !== undefined) {
+    values.push(JSON.stringify(input.templateVariableMappings));
+    fields.push(`template_variable_mappings = $${values.length}::jsonb`);
   }
 
   if (input.scheduleAt !== undefined) {

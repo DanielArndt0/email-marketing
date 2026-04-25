@@ -22,6 +22,7 @@ const systemConfigSchema = z.object({
       templates: paginationSchema,
       emailDispatches: paginationSchema,
       audiences: paginationSchema,
+      domains: paginationSchema,
     }),
     preview: z.object({
       defaultRecipientsLimit: z.number().int().positive(),
@@ -37,6 +38,12 @@ const systemConfigSchema = z.object({
   }),
   mail: z.object({
     fallbackText: z.string().min(1),
+  }),
+  domains: z.object({
+    cnpjApi: z.object({
+      cnaesPath: z.string().min(1),
+      citiesPath: z.string().min(1),
+    }),
   }),
   leadSources: z.object({
     cnpjApi: z.object({

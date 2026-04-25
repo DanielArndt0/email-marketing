@@ -29,6 +29,7 @@ export function createPatchUpdateCampaignHandler(
       status: body.status,
       templateId: body.templateId,
       audienceId: body.audienceId,
+      templateVariableMappings: body.templateVariableMappings,
       scheduleAt: body.scheduleAt,
     });
 

@@ -21,6 +21,43 @@ export const audienceSummarySchema = {
   ],
 } as const;
 
+export const templateVariableMappingSchema = {
+  anyOf: [
+    {
+      type: "object",
+      required: ["source", "path"],
+      properties: {
+        source: { type: "string", const: "lead" },
+        path: { type: "string", examples: ["metadata.razaoSocial"] },
+        fallback: { type: "string", examples: ["sua empresa"] },
+      },
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      required: ["source", "value"],
+      properties: {
+        source: { type: "string", const: "static" },
+        value: { type: "string", examples: ["https://exemplo.com/oferta"] },
+      },
+      additionalProperties: false,
+    },
+  ],
+} as const;
+
+export const templateVariableMappingsSchema = {
+  type: "object",
+  additionalProperties: templateVariableMappingSchema,
+  examples: [
+    {
+      company: { source: "lead", path: "metadata.razaoSocial" },
+      municipio: { source: "lead", path: "metadata.municipio" },
+      uf: { source: "lead", path: "metadata.uf" },
+      link: { source: "static", value: "https://exemplo.com/oferta" },
+    },
+  ],
+} as const;
+
 export const campaignSchema = {
   type: "object",
   required: [
@@ -30,6 +67,7 @@ export const campaignSchema = {
     "subject",
     "status",
     "templateId",
+    "templateVariableMappings",
     "audienceId",
     "audience",
     "scheduleAt",
@@ -56,6 +94,7 @@ export const campaignSchema = {
       ],
     },
     templateId: { type: ["string", "null"] },
+    templateVariableMappings: templateVariableMappingsSchema,
     audienceId: { type: ["string", "null"] },
     audience: audienceSummarySchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
@@ -103,6 +142,7 @@ export const createCampaignBodySchema = {
     },
     templateId: { type: ["string", "null"] },
     audienceId: { type: ["string", "null"], examples: ["audience-001"] },
+    templateVariableMappings: templateVariableMappingsSchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },
 } as const;
@@ -128,6 +168,7 @@ export const updateCampaignBodySchema = {
     },
     templateId: { type: ["string", "null"] },
     audienceId: { type: ["string", "null"] },
+    templateVariableMappings: templateVariableMappingsSchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },
   additionalProperties: false,

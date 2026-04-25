@@ -20,6 +20,11 @@
         "defaultPage": 1,
         "defaultPageSize": 20,
         "maxPageSize": 100
+      },
+      "domains": {
+        "defaultPage": 1,
+        "defaultPageSize": 20,
+        "maxPageSize": 100
       }
     },
     "preview": {
@@ -46,6 +51,12 @@
     "csvImport": {
       "defaultDelimiter": ",",
       "defaultEmailColumn": "email"
+    }
+  },
+  "domains": {
+    "cnpjApi": {
+      "cnaesPath": "/api/dominios/cnaes",
+      "citiesPath": "/api/dominios/cidades"
     }
   }
 }

@@ -11,6 +11,26 @@ const audienceSummarySchema = z
   })
   .nullable();
 
+const leadTemplateVariableMappingSchema = z.object({
+  source: z.literal("lead"),
+  path: z.string().min(1),
+  fallback: z.string().min(1).optional(),
+});
+
+const staticTemplateVariableMappingSchema = z.object({
+  source: z.literal("static"),
+  value: z.string(),
+});
+
+const templateVariableMappingSchema = z.discriminatedUnion("source", [
+  leadTemplateVariableMappingSchema,
+  staticTemplateVariableMappingSchema,
+]);
+
+const templateVariableMappingsSchema = z
+  .record(z.string().min(1), templateVariableMappingSchema)
+  .default({});
+
 export const createCampaignBodySchema = z.object({
   name: z.string().min(1),
   subject: z.union([z.string().min(1), z.null()]).optional(),
@@ -18,6 +38,7 @@ export const createCampaignBodySchema = z.object({
   status: z.enum(CAMPAIGN_STATUSES).default("draft"),
   templateId: z.string().min(1).nullable().optional(),
   audienceId: z.string().min(1).nullable().optional(),
+  templateVariableMappings: templateVariableMappingsSchema.optional(),
   scheduleAt: z.iso.datetime().nullable().optional(),
 });
 
@@ -29,6 +50,7 @@ export const updateCampaignBodySchema = z
     status: z.enum(CAMPAIGN_STATUSES).optional(),
     templateId: z.union([z.string().min(1), z.null()]).optional(),
     audienceId: z.union([z.string().min(1), z.null()]).optional(),
+    templateVariableMappings: templateVariableMappingsSchema.optional(),
     scheduleAt: z.union([z.iso.datetime(), z.null()]).optional(),
   })
   .refine(
@@ -39,6 +61,7 @@ export const updateCampaignBodySchema = z
       data.status !== undefined ||
       data.templateId !== undefined ||
       data.audienceId !== undefined ||
+      data.templateVariableMappings !== undefined ||
       data.scheduleAt !== undefined,
     { message: "É necessário informar ao menos um campo para atualização." },
   );
@@ -61,6 +84,7 @@ export const campaignSchema = z.object({
   goal: z.string().nullable(),
   status: z.enum(CAMPAIGN_STATUSES),
   templateId: z.string().nullable(),
+  templateVariableMappings: z.record(z.string(), templateVariableMappingSchema),
   audienceId: z.string().nullable(),
   audience: audienceSummarySchema,
   scheduleAt: z.string().nullable(),

@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import type { CampaignStatus } from "core";
+import type { CampaignStatus, TemplateVariableMappings } from "core";
 
 import { findAudienceById } from "../../audiences/repositories/audience-repository.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
@@ -19,6 +19,7 @@ export type UpdateCampaignInput = {
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
   audienceId?: string | null | undefined;
+  templateVariableMappings?: TemplateVariableMappings | undefined;
   scheduleAt?: string | null | undefined;
 };
 

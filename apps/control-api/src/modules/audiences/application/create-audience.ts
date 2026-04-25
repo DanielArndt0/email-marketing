@@ -21,12 +21,10 @@ export async function createAudience(
   dependencies: CreateAudienceDependencies,
   input: CreateAudienceInput,
 ): Promise<AudienceRecord> {
-  const normalizedInput: CreateAudienceInput = {
+  const row = await insertAudience(dependencies.pgPool, {
     ...input,
     filters: normalizeAudienceFilters(input.filters),
-  };
-
-  const row = await insertAudience(dependencies.pgPool, normalizedInput);
+  });
 
   return mapAudienceRow(row);
 }

@@ -1,8 +1,8 @@
 import type { Pool } from "pg";
 
 import { buildPaginationMeta } from "../../../shared/persistence/build-pagination-meta.js";
-import { normalizeDateValue } from "../../../shared/persistence/normalize-date-value.js";
 import { listTemplatesPage } from "../repositories/template-repository.js";
+import { mapTemplateRow, type TemplateRecord } from "./shared.js";
 
 type ListTemplatesDependencies = {
   pgPool: Pool;
@@ -13,18 +13,8 @@ export type ListTemplatesFilters = {
   pageSize: number;
 };
 
-export type TemplateListItem = {
-  id: string;
-  name: string;
-  subject: string;
-  htmlContent: string | null;
-  textContent: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type ListTemplatesResult = {
-  items: TemplateListItem[];
+  items: TemplateRecord[];
   page: number;
   pageSize: number;
   total: number;
@@ -41,15 +31,7 @@ export async function listTemplates(
   );
 
   return {
-    items: items.map((row) => ({
-      id: row.id,
-      name: row.name,
-      subject: row.subject,
-      htmlContent: row.htmlContent,
-      textContent: row.textContent,
-      createdAt: normalizeDateValue(row.createdAt) ?? "",
-      updatedAt: normalizeDateValue(row.updatedAt) ?? "",
-    })),
+    items: items.map(mapTemplateRow),
     ...buildPaginationMeta({
       page: filters.page,
       pageSize: filters.pageSize,

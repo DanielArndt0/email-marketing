@@ -1,6 +1,10 @@
 import type { Pool } from "pg";
 
-import { CAMPAIGN_STATUSES, type CampaignStatus } from "core";
+import {
+  CAMPAIGN_STATUSES,
+  type CampaignStatus,
+  type TemplateVariableMappings,
+} from "core";
 
 import { findAudienceById } from "../../audiences/repositories/audience-repository.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
@@ -18,6 +22,7 @@ export type CreateCampaignInput = {
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
   audienceId?: string | null | undefined;
+  templateVariableMappings?: TemplateVariableMappings | undefined;
   scheduleAt?: string | null | undefined;
 };
 
@@ -59,6 +64,7 @@ export async function createCampaign(
     status: input.status ?? CAMPAIGN_STATUSES[0],
     templateId: input.templateId,
     audienceId: input.audienceId,
+    templateVariableMappings: input.templateVariableMappings,
     scheduleAt: input.scheduleAt,
   });
 

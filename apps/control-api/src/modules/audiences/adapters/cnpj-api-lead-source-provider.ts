@@ -240,9 +240,6 @@ export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
       env.CNPJ_API_TIMEOUT_MS,
     );
 
-    // TODO - adicionar logs mais detalhados.
-    console.log("[CNPJ API URL]", url.toString());
-
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -262,11 +259,7 @@ export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
         );
       }
 
-      const payload = (await response.json()) as unknown;
-
-      console.log("[CNPJ API PAYLOAD]", JSON.stringify(payload, null, 2));
-
-      return payload;
+      return await response.json();
     } catch (error) {
       if (error instanceof LeadSourceRequestError) {
         throw error;
@@ -328,10 +321,9 @@ export class CnpjApiLeadSourceProvider implements LeadSourceProvider {
 
     const email = this.extractEmail(item);
 
-    // TODO - Descomentar quando a propriedade email voltar a ser obrigatória.
-    // if (!email) {
-    //   return null;
-    // }
+    if (!email) {
+      return null;
+    }
 
     return {
       email,

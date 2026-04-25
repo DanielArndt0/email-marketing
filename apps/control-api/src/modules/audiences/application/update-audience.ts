@@ -26,14 +26,12 @@ export async function updateAudience(
   dependencies: UpdateAudienceDependencies,
   input: UpdateAudienceInput,
 ): Promise<UpdateAudienceResult> {
-  const normalizedInput: UpdateAudienceInput = {
+  const row = await updateAudienceById(dependencies.pgPool, {
     ...input,
     filters: input.filters
       ? normalizeAudienceFilters(input.filters)
       : undefined,
-  };
-
-  const row = await updateAudienceById(dependencies.pgPool, normalizedInput);
+  });
 
   if (!row) {
     return { kind: "not_found" };

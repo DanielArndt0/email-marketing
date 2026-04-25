@@ -65,8 +65,6 @@ Para entender o projeto de forma progressiva, a ordem recomendada é:
 4. [Desenvolvimento local](./setup/local-development.md)
 5. documentação específica de apps e packages
 
-## Observação
+### Templates
 
-A documentação deve evoluir junto com o código.
-
-Sempre que houver mudanças relevantes em arquitetura, estrutura, fluxos, endpoints, configuração ou convenções, esta pasta deve ser atualizada para refletir o estado real do sistema.
+- [Variáveis de templates](./templates/template-variables.md)
