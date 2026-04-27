@@ -211,3 +211,28 @@ export const notFoundMessageSchema = {
     message: { type: "string" },
   },
 } as const;
+
+export const deleteCampaignRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Exclui uma campaign quando não houver dispatches vinculados",
+  params: campaignParamsSchema,
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        status: { type: "string", example: "deleted" },
+        id: { type: "string" },
+      },
+      required: ["status", "id"],
+    },
+    404: notFoundMessageSchema,
+    409: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+        dispatchesCount: { type: "number" },
+      },
+      required: ["message", "dispatchesCount"],
+    },
+  },
+} as const;

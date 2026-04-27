@@ -285,3 +285,32 @@ export async function findCampaignAudienceLinkById(
 
   return result.rows[0] ?? null;
 }
+
+export async function countEmailDispatchesByCampaignId(
+  pgPool: Pool,
+  campaignId: string,
+): Promise<number> {
+  const result = await pgPool.query<CountRow>(
+    `
+      SELECT COUNT(*)::text AS total
+      FROM email_dispatches
+      WHERE campaign_id = $1
+    `,
+    [campaignId],
+  );
+
+  return Number(result.rows[0]?.total ?? "0");
+}
+
+export async function deleteCampaignById(
+  pgPool: Pool,
+  id: string,
+): Promise<void> {
+  await pgPool.query(
+    `
+      DELETE FROM campaigns
+      WHERE id = $1
+    `,
+    [id],
+  );
+}

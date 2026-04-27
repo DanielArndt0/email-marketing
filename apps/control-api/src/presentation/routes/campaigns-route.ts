@@ -11,6 +11,7 @@ import { createGetListCampaignsHandler } from "../../modules/campaigns/http/get-
 import { createPatchUpdateCampaignHandler } from "../../modules/campaigns/http/patch-update-campaign-handler.js";
 import { createPostCreateCampaignHandler } from "../../modules/campaigns/http/post-create-campaign-handler.js";
 import { createPostEnqueueEmailDispatchHandler } from "../../modules/campaigns/http/post-enqueue-email-dispatch-handler.js";
+import { createDeleteCampaignHandler } from "../../modules/campaigns/http/delete-campaign-handler.js";
 import {
   campaignPaginationResponseSchema,
   campaignParamsSchema,
@@ -91,6 +92,38 @@ const enqueueEmailDispatchRouteSchema = {
   summary: "Cria e enfileira um email dispatch",
 } satisfies FastifySchema;
 
+const deleteCampaignRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Exclui uma campaign quando não houver dispatches vinculados",
+  params: campaignParamsSchema,
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        status: { type: "string", example: "deleted" },
+        id: { type: "string" },
+      },
+      required: ["status", "id"],
+    },
+    404: notFoundMessageSchema,
+    409: {
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          example:
+            "A campaign não pode ser excluída porque já possui email dispatches vinculados.",
+        },
+        dispatchesCount: {
+          type: "number",
+          example: 3,
+        },
+      },
+      required: ["message", "dispatchesCount"],
+    },
+  },
+} satisfies FastifySchema;
+
 export function registerCampaignsRoute(
   app: FastifyInstance,
   dependencies: RegisterCampaignsRouteDependencies,
@@ -154,6 +187,16 @@ export function registerCampaignsRoute(
     createPostEnqueueEmailDispatchHandler({
       pgPool: dependencies.pgPool,
       queue: dependencies.emailDispatchQueue,
+    }),
+  );
+
+  app.delete(
+    "/campaigns/:id",
+    {
+      schema: deleteCampaignRouteSchema,
+    },
+    createDeleteCampaignHandler({
+      pgPool: dependencies.pgPool,
     }),
   );
 }

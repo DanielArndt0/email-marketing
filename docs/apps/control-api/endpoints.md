@@ -196,6 +196,14 @@ Atualiza parcialmente uma campaign.
 
 ---
 
+### `DELETE /campaigns/:id`
+
+Exclui uma campaign.
+
+A exclusão só é permitida quando a campaign não possui email dispatches vinculados.
+
+---
+
 ### `GET /campaigns/:id/audience-preview`
 
 Resolve a audience atualmente vinculada à campaign.
