@@ -32,7 +32,7 @@ export function createDeleteTemplateHandler(
     if (result.kind === "in_use") {
       return reply.status(409).send({
         message:
-          "O template não pode ser excluído porque já possui email dispatches vinculados.",
+          "O template não pode ser excluído porque já está vinculado a campanhas.",
         campaignsCount: result.campaignsCount,
       });
     }
