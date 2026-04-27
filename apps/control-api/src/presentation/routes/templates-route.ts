@@ -73,10 +73,10 @@ const deleteTemplateRouteSchema = {
     404: templateMessageSchema,
     409: {
       type: "object",
-      required: ["message", "dispatchesCount"],
+      required: ["message", "campaignsCount"],
       properties: {
         message: { type: "string" },
-        dispatchesCount: { type: "integer" },
+        campaignsCount: { type: "integer" },
       },
     },
   },

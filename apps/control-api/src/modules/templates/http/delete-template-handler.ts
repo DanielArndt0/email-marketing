@@ -33,7 +33,7 @@ export function createDeleteTemplateHandler(
       return reply.status(409).send({
         message:
           "O template não pode ser excluído porque já possui email dispatches vinculados.",
-        dispatchesCount: result.dispatchesCount,
+        campaignsCount: result.campaignsCount,
       });
     }
 

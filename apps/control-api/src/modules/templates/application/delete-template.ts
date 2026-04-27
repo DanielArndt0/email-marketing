@@ -1,7 +1,8 @@
 import type { Pool } from "pg";
 
 import {
-  countTemplateDispatchLinks,
+  // countTemplateDispatchLinks,
+  countCampaignsByTemplateId,
   deleteTemplateById,
   findTemplateById,
 } from "../repositories/template-repository.js";
@@ -16,7 +17,7 @@ export type DeleteTemplateResult =
     }
   | {
       kind: "in_use";
-      dispatchesCount: number;
+      campaignsCount: number;
     }
   | {
       kind: "deleted";
@@ -35,15 +36,15 @@ export async function deleteTemplate(
     };
   }
 
-  const dispatchesCount = await countTemplateDispatchLinks(
+  const campaignsCount = await countCampaignsByTemplateId(
     dependencies.pgPool,
     id,
   );
 
-  if (dispatchesCount > 0) {
+  if (campaignsCount > 0) {
     return {
       kind: "in_use",
-      dispatchesCount,
+      campaignsCount,
     };
   }
 
