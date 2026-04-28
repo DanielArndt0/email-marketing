@@ -8,6 +8,7 @@ import {
   markEmailDispatchProcessing,
   markEmailDispatchSent,
 } from "../repositories/email-dispatch-worker-repository.js";
+import { syncCampaignStatusFromDispatches } from "./sync-campaign-status-from-dispatches.js";
 
 type ProcessEmailDispatchDependencies = {
   pgPool: Pool;
@@ -53,6 +54,13 @@ export async function processEmailDispatch(
       providerMessageId: result.messageId,
     });
 
+    await syncCampaignStatusFromDispatches(
+      {
+        pgPool: dependencies.pgPool,
+      },
+      dispatch.campaignId,
+    );
+
     return {
       campaignId: dispatch.campaignId,
       contactId: dispatch.contactId,
@@ -66,6 +74,13 @@ export async function processEmailDispatch(
       dispatchId: input.dispatchId,
       errorMessage,
     });
+
+    await syncCampaignStatusFromDispatches(
+      {
+        pgPool: dependencies.pgPool,
+      },
+      dispatch.campaignId,
+    );
 
     throw error;
   }

@@ -7,7 +7,10 @@ import type { LeadSourceProviderRegistry } from "../../audiences/adapters/lead-s
 import { resolveAudience } from "../../audiences/application/resolve-audience.js";
 import { enqueueEmailDispatch } from "./enqueue-email-dispatch.js";
 import { mapCampaignRow } from "./shared.js";
-import { findCampaignById } from "../repositories/campaign-repository.js";
+import {
+  findCampaignById,
+  updateCampaignStatusById,
+} from "../repositories/campaign-repository.js";
 import { resolveTemplateVariablesFromLead } from "./resolve-template-variables.js";
 
 type DispatchCampaignDependencies = {
@@ -94,64 +97,83 @@ export async function dispatchCampaign(
     };
   }
 
-  const resolvedAudience = await resolveAudience(
-    {
-      providerRegistry: dependencies.providerRegistry,
-    },
-    {
-      sourceType: campaign.audience.sourceType,
-      filters: campaign.audience.filters,
-      limit: input.limit,
-    },
-  );
+  await updateCampaignStatusById(dependencies.pgPool, campaign.id, "running");
 
-  const dispatchIds: string[] = [];
-  let skippedRecipientsCount = 0;
-
-  for (const lead of resolvedAudience.items) {
-    const email = getRecipientEmail(lead.email);
-
-    if (!email) {
-      skippedRecipientsCount += 1;
-      continue;
-    }
-
-    const templateVariables = resolveTemplateVariablesFromLead(
-      campaign.templateVariableMappings,
-      lead,
-    );
-
-    const result = await enqueueEmailDispatch(
+  try {
+    const resolvedAudience = await resolveAudience(
       {
-        pgPool: dependencies.pgPool,
-        queue: dependencies.queue,
+        providerRegistry: dependencies.providerRegistry,
       },
       {
-        campaignId: campaign.id,
-        campaignName: campaign.name,
-        contactId: getContactId({
+        sourceType: campaign.audience.sourceType,
+        filters: campaign.audience.filters,
+        limit: input.limit,
+      },
+    );
+
+    const dispatchIds: string[] = [];
+    let skippedRecipientsCount = 0;
+
+    for (const lead of resolvedAudience.items) {
+      const email = getRecipientEmail(lead.email);
+
+      if (!email) {
+        skippedRecipientsCount += 1;
+        continue;
+      }
+
+      const templateVariables = resolveTemplateVariablesFromLead(
+        campaign.templateVariableMappings,
+        lead,
+      );
+
+      const result = await enqueueEmailDispatch(
+        {
+          pgPool: dependencies.pgPool,
+          queue: dependencies.queue,
+        },
+        {
           campaignId: campaign.id,
-          email,
-          externalId: lead.externalId,
-        }),
-        to: email,
-        templateId: campaign.templateId,
-        templateVariables,
-      },
-    );
+          campaignName: campaign.name,
+          contactId: getContactId({
+            campaignId: campaign.id,
+            email,
+            externalId: lead.externalId,
+          }),
+          to: email,
+          templateId: campaign.templateId,
+          templateVariables,
+        },
+      );
 
-    if (result.kind === "accepted") {
-      dispatchIds.push(result.dispatchId);
+      if (result.kind === "accepted") {
+        dispatchIds.push(result.dispatchId);
+        continue;
+      }
+
+      skippedRecipientsCount += 1;
     }
-  }
 
-  return {
-    kind: "accepted",
-    campaignId: campaign.id,
-    resolvedRecipientsCount: resolvedAudience.count,
-    createdDispatchesCount: dispatchIds.length,
-    queuedDispatchesCount: dispatchIds.length,
-    skippedRecipientsCount,
-    dispatchIds,
-  };
+    if (dispatchIds.length === 0) {
+      await updateCampaignStatusById(
+        dependencies.pgPool,
+        campaign.id,
+        "failed",
+      );
+    }
+
+    return {
+      kind: "accepted",
+      campaignId: campaign.id,
+      resolvedRecipientsCount: resolvedAudience.count,
+      createdDispatchesCount: dispatchIds.length,
+      queuedDispatchesCount: dispatchIds.length,
+      skippedRecipientsCount,
+      dispatchIds,
+    };
+  } catch (error) {
+    await updateCampaignStatusById(dependencies.pgPool, campaign.id, "failed");
+
+    throw error;
+  }
 }

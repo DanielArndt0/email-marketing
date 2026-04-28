@@ -7,3 +7,4 @@ export * from "./email-dispatch/email-dispatch-status.js";
 export * from "./template/template-variable.js";
 export * from "./template/template-variable-mapping.js";
 export * from "./domain/domain-reference.js";
+export * from "./campaign/campaign-status-rules.js";
