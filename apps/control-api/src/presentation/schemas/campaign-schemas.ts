@@ -21,6 +21,34 @@ export const audienceSummarySchema = {
   ],
 } as const;
 
+const campaignTemplateVariableSchema = {
+  type: "object",
+  properties: {
+    key: { type: "string" },
+    label: { type: "string" },
+    required: { type: "boolean" },
+    description: { type: "string" },
+    example: { type: "string" },
+  },
+  required: ["key"],
+  additionalProperties: false,
+} as const;
+
+const campaignTemplateSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    subject: { type: "string" },
+    variables: {
+      type: "array",
+      items: campaignTemplateVariableSchema,
+    },
+  },
+  required: ["id", "name", "subject", "variables"],
+  additionalProperties: false,
+} as const;
+
 export const templateVariableMappingSchema = {
   anyOf: [
     {
@@ -94,6 +122,9 @@ export const campaignSchema = {
       ],
     },
     templateId: { type: ["string", "null"] },
+    template: {
+      anyOf: [campaignTemplateSchema, { type: "null" }],
+    },
     templateVariableMappings: templateVariableMappingsSchema,
     audienceId: { type: ["string", "null"] },
     audience: audienceSummarySchema,

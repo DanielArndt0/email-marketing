@@ -3,6 +3,7 @@ import {
   parseLeadSourceType,
   type AudienceDefinition,
   type CampaignStatus,
+  type TemplateVariable,
   type TemplateVariableMappings,
 } from "core";
 
@@ -17,6 +18,12 @@ export type CampaignRecord = {
   goal: string | null;
   status: CampaignStatus;
   templateId: string | null;
+  template: {
+    id: string;
+    name: string;
+    subject: string;
+    variables: TemplateVariable[];
+  } | null;
   templateVariableMappings: TemplateVariableMappings;
   audienceId: string | null;
   audience:
@@ -75,6 +82,21 @@ function toAudienceRecord(row: RawCampaignRow): CampaignRecord["audience"] {
   };
 }
 
+function toTemplateRecord(row: RawCampaignRow): CampaignRecord["template"] {
+  if (!row.templateId || !row.templateName || !row.templateSubject) {
+    return null;
+  }
+
+  return {
+    id: row.templateId,
+    name: row.templateName,
+    subject: row.templateSubject,
+    variables: Array.isArray(row.templateVariables)
+      ? (row.templateVariables as TemplateVariable[])
+      : [],
+  };
+}
+
 function toTemplateVariableMappings(value: unknown): TemplateVariableMappings {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return {};
@@ -91,6 +113,7 @@ export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
     goal: row.goal,
     status: toCampaignStatus(row.status),
     templateId: row.templateId,
+    template: toTemplateRecord(row),
     templateVariableMappings: toTemplateVariableMappings(
       row.templateVariableMappings,
     ),

@@ -191,22 +191,6 @@ export async function updateTemplateById(
   return result.rows[0] ?? null;
 }
 
-// export async function countTemplateDispatchLinks(
-//   pgPool: Pool,
-//   templateId: string,
-// ): Promise<number> {
-//   const result = await pgPool.query<CountRow>(
-//     `
-//       SELECT COUNT(*)::text AS total
-//       FROM email_dispatches
-//       WHERE template_id = $1
-//     `,
-//     [templateId],
-//   );
-
-//   return Number(result.rows[0]?.total ?? "0");
-// }
-
 export async function deleteTemplateById(
   pgPool: Pool,
   id: string,

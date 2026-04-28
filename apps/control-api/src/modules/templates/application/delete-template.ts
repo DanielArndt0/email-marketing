@@ -1,7 +1,6 @@
 import type { Pool } from "pg";
 
 import {
-  // countTemplateDispatchLinks,
   countCampaignsByTemplateId,
   deleteTemplateById,
   findTemplateById,

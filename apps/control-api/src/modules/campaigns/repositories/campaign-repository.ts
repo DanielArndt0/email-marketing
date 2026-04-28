@@ -9,16 +9,22 @@ type CountRow = { total: string };
 export type RawCampaignRow = {
   id: string;
   name: string;
-  goal: string | null;
   subject: string | null;
+  goal: string | null;
   status: string;
   templateId: string | null;
-  templateVariableMappings: unknown;
+
+  templateName: string | null;
+  templateSubject: string | null;
+  templateVariables: unknown;
+
   audienceId: string | null;
   audienceName: string | null;
   audienceDescription: string | null;
   audienceSourceType: string | null;
   audienceFilters: Record<string, unknown> | null;
+
+  templateVariableMappings: unknown;
   scheduleAt: Date | string | null;
   lastExecutionAt: Date | string | null;
   createdAt: Date | string;
@@ -121,6 +127,9 @@ export async function listCampaignsPage(
         c.subject,
         c.status,
         c.template_id AS "templateId",
+        t.name AS "templateName",
+        t.subject AS "templateSubject",
+        t.variables AS "templateVariables",
         c.template_variable_mappings AS "templateVariableMappings",
         c.audience_id AS "audienceId",
         a.name AS "audienceName",
@@ -132,6 +141,7 @@ export async function listCampaignsPage(
         c.created_at AS "createdAt",
         c.updated_at AS "updatedAt"
       FROM campaigns c
+      LEFT JOIN templates t ON t.id = c.template_id
       LEFT JOIN audiences a ON a.id = c.audience_id
       ${whereClause}
       ORDER BY c.created_at DESC
@@ -160,6 +170,9 @@ export async function findCampaignById(
         c.subject,
         c.status,
         c.template_id AS "templateId",
+        t.name AS "templateName",
+        t.subject AS "templateSubject",
+        t.variables AS "templateVariables",
         c.template_variable_mappings AS "templateVariableMappings",
         c.audience_id AS "audienceId",
         a.name AS "audienceName",
@@ -171,6 +184,7 @@ export async function findCampaignById(
         c.created_at AS "createdAt",
         c.updated_at AS "updatedAt"
       FROM campaigns c
+      LEFT JOIN templates t ON t.id = c.template_id
       LEFT JOIN audiences a ON a.id = c.audience_id
       WHERE c.id = $1
       LIMIT 1

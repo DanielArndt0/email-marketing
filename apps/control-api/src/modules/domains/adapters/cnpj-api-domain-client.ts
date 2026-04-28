@@ -110,12 +110,6 @@ export class CnpjApiDomainClient {
 
       const payload = (await response.json()) as unknown;
 
-      console.log("[CNPJ API DOMAIN URL]", url.toString());
-      console.log(
-        "[CNPJ API DOMAIN PAYLOAD]",
-        JSON.stringify(payload, null, 2),
-      );
-
       return payload;
     } catch (error) {
       if (error instanceof CnpjApiDomainRequestError) {
