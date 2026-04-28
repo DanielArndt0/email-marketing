@@ -267,3 +267,77 @@ export const deleteCampaignRouteSchema = {
     },
   },
 } as const;
+
+export const dispatchCampaignBodySchema = {
+  type: "object",
+  properties: {
+    limit: {
+      type: "integer",
+      minimum: 1,
+      description:
+        "Limite opcional de destinatários para este disparo. Se omitido, usa a configuração da própria audience/fonte.",
+      examples: [50],
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const dispatchCampaignResponseSchema = {
+  type: "object",
+  required: [
+    "kind",
+    "campaignId",
+    "resolvedRecipientsCount",
+    "createdDispatchesCount",
+    "queuedDispatchesCount",
+    "skippedRecipientsCount",
+    "dispatchIds",
+  ],
+  properties: {
+    kind: { type: "string", const: "accepted" },
+    campaignId: { type: "string" },
+    resolvedRecipientsCount: { type: "integer" },
+    createdDispatchesCount: { type: "integer" },
+    queuedDispatchesCount: { type: "integer" },
+    skippedRecipientsCount: { type: "integer" },
+    dispatchIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+} as const;
+
+export const dispatchCampaignsBatchBodySchema = {
+  type: "object",
+  required: ["campaignIds"],
+  properties: {
+    campaignIds: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+    },
+    limitPerCampaign: {
+      type: "integer",
+      minimum: 1,
+      description:
+        "Limite opcional por campaign. Se omitido, cada campaign usa a configuração da própria audience/fonte.",
+      examples: [50],
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const dispatchCampaignsBatchResponseSchema = {
+  type: "object",
+  required: ["status", "items"],
+  properties: {
+    status: { type: "string", const: "accepted" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: true,
+      },
+    },
+  },
+} as const;

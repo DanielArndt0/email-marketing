@@ -212,6 +212,35 @@ Assim como `GET /audiences/:id/preview`, este endpoint usa os filtros persistido
 
 ---
 
+### `POST /campaigns/:id/dispatch`
+
+Cria e enfileira email dispatches para uma campaign específica.
+
+O campo `limit` é opcional. Se omitido, a resolução usa a configuração da própria audience/fonte.
+
+#### Exemplo
+
+```json
+{
+  "limit": 50
+}
+```
+
+---
+
+### `POST /campaigns/dispatch/batch`
+
+Cria e enfileira dispatches para múltiplas campaigns.
+
+```json
+{
+  "campaignIds": ["campaign-001", "campaign-002"],
+  "limitPerCampaign": 50
+}
+```
+
+---
+
 ## Observação sobre CNPJ API
 
 O adapter `cnpj-api` usa as rotas especializadas de prospecção da CNPJ API:

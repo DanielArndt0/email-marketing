@@ -1,4 +1,6 @@
 import type { FastifyInstance, FastifySchema } from "fastify";
+import { createPostDispatchCampaignHandler } from "../../modules/campaigns/http/post-dispatch-campaign-handler.js";
+import { createPostDispatchCampaignsBatchHandler } from "../../modules/campaigns/http/post-dispatch-campaigns-batch-handler.js";
 import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
@@ -20,6 +22,10 @@ import {
   listCampaignsQuerySchema,
   notFoundMessageSchema,
   updateCampaignBodySchema,
+  dispatchCampaignBodySchema,
+  dispatchCampaignResponseSchema,
+  dispatchCampaignsBatchBodySchema,
+  dispatchCampaignsBatchResponseSchema,
 } from "../schemas/campaign-schemas.js";
 import {
   audiencePreviewSchema,
@@ -89,7 +95,10 @@ const previewCampaignAudienceRouteSchema = {
 
 const enqueueEmailDispatchRouteSchema = {
   tags: ["campaigns"],
-  summary: "Cria e enfileira um email dispatch",
+  summary: "Cria e enfileira um email dispatch manualmente",
+  deprecated: true,
+  description:
+    "Endpoint legado/manual. Para disparo por campaign, use POST /campaigns/:id/dispatch.",
 } satisfies FastifySchema;
 
 const deleteCampaignRouteSchema = {
@@ -121,6 +130,32 @@ const deleteCampaignRouteSchema = {
       },
       required: ["message", "dispatchesCount"],
     },
+  },
+} satisfies FastifySchema;
+
+const dispatchCampaignRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Cria e enfileira dispatches para uma campaign",
+  description:
+    "Resolve a audience vinculada à campaign, aplica os mappings do template e cria email dispatches para os leads com e-mail.",
+  params: campaignParamsSchema,
+  body: dispatchCampaignBodySchema,
+  response: {
+    202: dispatchCampaignResponseSchema,
+    404: messageSchema,
+    409: messageSchema,
+    502: messageSchema,
+  },
+} satisfies FastifySchema;
+
+const dispatchCampaignsBatchRouteSchema = {
+  tags: ["campaigns"],
+  summary: "Cria e enfileira dispatches para várias campaigns",
+  description:
+    "Executa o fluxo de dispatch para uma lista de campaignIds. O resultado é retornado individualmente por campaign.",
+  body: dispatchCampaignsBatchBodySchema,
+  response: {
+    202: dispatchCampaignsBatchResponseSchema,
   },
 } satisfies FastifySchema;
 
@@ -175,6 +210,30 @@ export function registerCampaignsRoute(
     },
     createGetPreviewCampaignAudienceHandler({
       pgPool: dependencies.pgPool,
+      providerRegistry: dependencies.providerRegistry,
+    }),
+  );
+
+  app.post(
+    "/campaigns/:id/dispatch",
+    {
+      schema: dispatchCampaignRouteSchema,
+    },
+    createPostDispatchCampaignHandler({
+      pgPool: dependencies.pgPool,
+      queue: dependencies.emailDispatchQueue,
+      providerRegistry: dependencies.providerRegistry,
+    }),
+  );
+
+  app.post(
+    "/campaigns/dispatch/batch",
+    {
+      schema: dispatchCampaignsBatchRouteSchema,
+    },
+    createPostDispatchCampaignsBatchHandler({
+      pgPool: dependencies.pgPool,
+      queue: dependencies.emailDispatchQueue,
       providerRegistry: dependencies.providerRegistry,
     }),
   );
