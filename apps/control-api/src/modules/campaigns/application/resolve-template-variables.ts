@@ -31,18 +31,26 @@ function toTemplateVariableValue(value: unknown): string | undefined {
   return undefined;
 }
 
-export function resolveTemplateVariablesFromLead(
-  mappings: TemplateVariableMappings,
-  lead: LeadRecipient,
-): TemplateVariables {
-  const variables: TemplateVariables = {};
-
-  const leadSource = {
+function buildLeadVariableSource(lead: LeadRecipient): Record<string, unknown> {
+  return {
     email: lead.email,
     externalId: lead.externalId,
     sourceType: lead.sourceType,
     metadata: lead.metadata,
   };
+}
+
+function resolveLeadMappingValue(lead: LeadRecipient, path: string): unknown {
+  const leadSource = buildLeadVariableSource(lead);
+
+  return getValueByPath(leadSource, path);
+}
+
+export function resolveTemplateVariablesFromLead(
+  mappings: TemplateVariableMappings,
+  lead: LeadRecipient,
+): TemplateVariables {
+  const variables: TemplateVariables = {};
 
   for (const [variableKey, mapping] of Object.entries(mappings)) {
     if (mapping.source === "static") {
@@ -51,7 +59,7 @@ export function resolveTemplateVariablesFromLead(
     }
 
     const value = toTemplateVariableValue(
-      getValueByPath(leadSource, mapping.path),
+      resolveLeadMappingValue(lead, mapping.path),
     );
 
     if (value !== undefined) {

@@ -226,6 +226,16 @@ O campo `limit` é opcional. Se omitido, a resolução usa a configuração da p
 }
 ```
 
+#### Variáveis de template
+
+Durante o dispatch da campaign, o backend usa `templateVariableMappings` da própria campaign para montar as variáveis finais do template.
+
+Campos padrão do lead usam path direto, como `email` e `externalId`.
+
+Campos específicos da fonte devem usar `metadata`, como `metadata.razaoSocial`, `metadata.municipio` ou `metadata.uf`.
+
+Mais detalhes em [Template variables](../../templates/template-variables.md).
+
 ---
 
 ### `POST /campaigns/dispatch/batch`
