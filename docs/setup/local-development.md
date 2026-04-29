@@ -73,6 +73,8 @@ SMTP_USER=
 SMTP_PASSWORD=
 SMTP_FROM_NAME=Mail Engine
 SMTP_FROM_EMAIL=no-reply@example.com
+
+SMTP_SENDER_ENCRYPTION_KEY=change-this-secret-key-with-at-least-32-chars
 ```
 
 ## Configuração geral do sistema
@@ -111,6 +113,38 @@ docker compose -f infra/compose.yaml down
 ```
 
 ## Mailpit
+
+### SMTP Senders locais
+
+O MailPit agora deve ser cadastrado como um SMTP Sender para uso nas campaigns de desenvolvimento.
+
+Se API e worker estiverem rodando fora do Docker, use `localhost` como host:
+
+```json
+{
+  "name": "MailPit Local",
+  "fromName": "Email Marketing Dev",
+  "fromEmail": "dev@email-marketing.local",
+  "replyToEmail": null,
+  "host": "localhost",
+  "port": 1025,
+  "secure": false,
+  "username": null,
+  "password": null,
+  "isActive": true
+}
+```
+
+Se o worker estiver rodando dentro do Docker Compose, use o nome do serviço como host:
+
+```json
+{
+  "host": "mailpit",
+  "port": 1025,
+  "secure": false
+}
+```
+
 
 O Mailpit é o servidor SMTP local de desenvolvimento usado para capturar os e-mails enviados pela aplicação.
 

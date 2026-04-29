@@ -25,6 +25,7 @@ O projeto está em evolução e, no momento, reúne:
 
 - [Control API](./apps/control-api.md)
 - [Endpoints da Control API](./apps/control-api/endpoints.md)
+- [SMTP Senders](./apps/control-api/smtp-senders.md)
 - [Dispatch Worker](./apps/dispatch-worker.md)
 
 ### Packages
@@ -41,6 +42,10 @@ O projeto está em evolução e, no momento, reúne:
 ### Setup
 
 - [Desenvolvimento local](./setup/local-development.md)
+
+### Banco de dados
+
+- [Migrations](./database/migrations.md)
 
 ### Convenções
 

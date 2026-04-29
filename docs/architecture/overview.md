@@ -18,7 +18,16 @@ O sistema foi estruturado como monorepo com separação entre:
 5. o dispatch é persistido
 6. um job é publicado na fila
 7. o worker consome o job
-8. o worker envia o e-mail e atualiza o status
+8. o worker carrega o SMTP Sender vinculado ao dispatch
+9. o worker envia o e-mail e atualiza o status
+
+## SMTP dinâmico
+
+O envio de campaigns usa SMTP Senders persistidos no banco.
+
+A campaign aponta para um `smtpSenderId`, e cada `email_dispatch` recebe uma cópia desse vínculo em `smtp_sender_id` no momento do enfileiramento. O worker usa esse vínculo para carregar host, porta, credenciais, `fromName`, `fromEmail` e `replyToEmail`.
+
+Com isso, MailPit e SMTPs reais são tratados pelo mesmo fluxo: ambos são apenas registros em `smtp_senders`.
 
 ## Convenção aplicada na API
 

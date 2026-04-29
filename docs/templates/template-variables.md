@@ -62,3 +62,25 @@ Exemplo:
 ```
 
 Esse desenho permite usar o mesmo template com diferentes fontes de leads, como CNPJ API, CSV import ou lista manual.
+
+## Relação com SMTP Sender
+
+O mapeamento de variáveis continua independente do SMTP Sender.
+
+As variáveis são resolvidas com base nos dados do lead/audience e aplicadas ao template antes da criação do dispatch.
+
+O SMTP Sender define apenas por qual remetente o e-mail será enviado.
+
+Fluxo simplificado:
+
+```text
+audience lead
+  ↓
+templateVariableMappings
+  ↓
+template renderizado
+  ↓
+email_dispatch criado com smtp_sender_id
+  ↓
+worker envia pelo SMTP Sender escolhido
+```

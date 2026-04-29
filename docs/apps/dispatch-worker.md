@@ -19,7 +19,8 @@ Atualmente, o `dispatch-worker` é responsável por:
 - consumir a fila `email-dispatch`
 - carregar do banco o dispatch persistido
 - marcar o dispatch como `processing`
-- enviar e-mail via SMTP
+- carregar o SMTP Sender vinculado ao dispatch
+- enviar e-mail via SMTP dinâmico
 - atualizar o status do dispatch no PostgreSQL
 - registrar sucesso e falha de processamento em logs
 
@@ -43,8 +44,9 @@ De forma resumida, o fluxo atual do worker é:
 3. a fila `email-dispatch` passa a ser observada
 4. quando um job é recebido, o worker carrega o dispatch correspondente no banco
 5. o dispatch é marcado como `processing`
-6. o e-mail é enviado
-7. o status final é atualizado para `sent` ou `error`
+6. o worker carrega o SMTP Sender vinculado ao dispatch
+7. o e-mail é enviado pelo SMTP dinâmico
+8. o status final é atualizado para `sent` ou `error`
 
 ## Diretriz de arquitetura
 
@@ -61,3 +63,79 @@ Sempre que viável:
 O worker não deve concentrar regras desnecessárias de composição de conteúdo.
 
 A tendência arquitetural desejada é que ele atue mais como executor do dispatch persistido do que como responsável por construir a mensagem.
+
+## SMTP Sender dinâmico
+
+O `dispatch-worker` agora envia e-mails usando o SMTP Sender vinculado ao dispatch.
+
+Antes, o worker usava apenas as configurações SMTP do `.env`.
+
+Agora o fluxo é:
+
+```text
+job BullMQ
+  ↓
+dispatchId
+  ↓
+email_dispatches.smtp_sender_id
+  ↓
+smtp_senders
+  ↓
+Nodemailer transporter dinâmico
+  ↓
+envio do e-mail
+```
+
+### Como o worker escolhe o SMTP?
+
+O worker não decide diretamente se vai usar MailPit ou SMTP real.
+
+Ele lê o `smtp_sender_id` do dispatch e carrega as configurações daquele sender no banco.
+
+Portanto:
+
+- para teste local, a campaign deve estar vinculada a um sender apontando para MailPit;
+- para produção, a campaign deve estar vinculada a um sender apontando para o SMTP real.
+
+### Exemplo local com MailPit
+
+```json
+{
+  "host": "mailpit",
+  "port": 1025,
+  "secure": false,
+  "username": null,
+  "password": null
+}
+```
+
+### Exemplo produção
+
+```json
+{
+  "host": "smtp.exemplo.com",
+  "port": 587,
+  "secure": false,
+  "username": "contato@empresa.com.br",
+  "password": "senha-ou-app-password"
+}
+```
+
+### Falhas possíveis
+
+O worker marca o dispatch como `error` quando:
+
+- o dispatch não possui `smtp_sender_id`;
+- o SMTP Sender não existe;
+- o SMTP Sender está inativo;
+- a senha criptografada não pode ser descriptografada;
+- o SMTP rejeita autenticação;
+- o envio falha por erro de conexão ou provedor.
+
+### Atualização de status da campaign
+
+Depois que os dispatches são processados, o worker pode sincronizar o status da campaign:
+
+- `completed`, quando ao menos um envio foi concluído e não há dispatches pendentes/processando;
+- `failed`, quando todos os dispatches falharam;
+- mantém `running`, enquanto ainda houver dispatches pendentes, enfileirados ou processando.

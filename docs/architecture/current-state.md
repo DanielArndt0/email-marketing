@@ -12,9 +12,10 @@ Atualmente, o sistema funciona assim:
 4. a API enfileira jobs no Redis via BullMQ
 5. o `dispatch-worker` consome os jobs
 6. o worker busca os dados necessários no PostgreSQL
-7. o worker envia o e-mail via Nodemailer/SMTP
-8. o Mailpit recebe os e-mails em ambiente local
-9. o status do dispatch é atualizado no PostgreSQL
+7. o worker carrega o SMTP Sender vinculado ao dispatch
+8. o worker envia o e-mail via Nodemailer/SMTP dinâmico
+9. o MailPit recebe os e-mails em ambiente local quando a campaign usa o sender local
+10. o status do dispatch é atualizado no PostgreSQL
 
 ## Estrutura atual
 
@@ -68,6 +69,8 @@ O arquivo JSON centraliza, neste momento:
 - fallback de conteúdo textual para envio
 - paths da CNPJ API para lead sources e domínios auxiliares
 
+A escolha do SMTP usado em campaigns fica persistida no banco em `smtp_senders`, `campaigns.smtp_sender_id` e `email_dispatches.smtp_sender_id`.
+
 ## Módulos existentes
 
 ### Health
@@ -93,6 +96,10 @@ Responsável por audiences persistidas, resolução de destinatários por lead s
 
 Responsável por expor domínios auxiliares da CNPJ API, como CNAEs e cidades, em formato padronizado para o front-end.
 
+### SMTP Senders
+
+Responsável por gerenciar remetentes SMTP reutilizáveis, incluindo dados públicos do remetente, conexão SMTP, teste de conexão/envio e credenciais criptografadas.
+
 ### Email Dispatches
 
 Responsável por listagem, consulta por ID e retry.
@@ -106,7 +113,7 @@ Responsável por CRUD parcial de templates e integração com dispatch.
 - fluxo principal funcional ponta a ponta
 - persistência em PostgreSQL
 - processamento assíncrono com BullMQ
-- integração SMTP local com Mailpit
+- integração SMTP local com MailPit via sender cadastrado no banco
 - configuração geral menos hard-coded
 - separação mais clara entre caso de uso, repositório e infraestrutura
 

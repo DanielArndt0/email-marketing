@@ -14,7 +14,7 @@ Hoje, o pacote reúne principalmente:
 - conexão com PostgreSQL
 - conexão com Redis
 - abstrações de fila BullMQ
-- integração SMTP/Nodemailer
+- integração SMTP/Nodemailer, incluindo transporter com configuração dinâmica
 - renderização simples de templates
 - runner de migrations
 
@@ -45,3 +45,11 @@ Ele deve continuar organizado por responsabilidade, especialmente em áreas como
 ## Observação
 
 À medida que o projeto crescer, o `shared` tende a se tornar mais importante para reduzir hard-coded, consolidar integração e evitar repetição técnica entre apps.
+
+## SMTP dinâmico
+
+O pacote `shared` mantém a integração comum de envio de e-mail.
+
+O fluxo legado baseado em `.env` permanece como fallback/compatibilidade, mas o envio principal das campaigns usa configurações carregadas de `smtp_senders` e repassadas ao `sendEmail` pelo `dispatch-worker`.
+
+Também ficam no `shared` os utilitários técnicos de criptografia usados para proteger senhas SMTP armazenadas no banco.

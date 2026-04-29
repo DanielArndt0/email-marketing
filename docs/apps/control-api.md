@@ -10,7 +10,8 @@ Atualmente, ela concentra:
 - campaigns;
 - audiences;
 - preview de audiences por source type ou por campaign;
-- domínios externos da CNPJ API para filtros e autocompletes.
+- domínios externos da CNPJ API para filtros e autocompletes;
+- SMTP Senders dinâmicos para escolha de remetente por campaign.
 
 ## Papel
 
@@ -21,7 +22,9 @@ A API serve como porta de entrada para:
 - vincular audiences a campaigns;
 - consultar previews de destinatários antes da execução;
 - consultar domínios auxiliares da CNPJ API para apoiar o front-end;
-- registrar dispatches e enfileirar envios.
+- registrar dispatches e enfileirar envios;
+- cadastrar e testar remetentes SMTP reutilizáveis;
+- vincular um SMTP Sender específico a cada campaign.
 
 ## Destaques atuais
 
@@ -48,6 +51,16 @@ No estado atual, o sistema possui adapters para:
 - `cnpj-api`
 - `csv-import`
 - `manual-list`
+
+### SMTP Senders
+
+A API expõe um módulo para cadastrar múltiplos remetentes SMTP.
+
+Cada SMTP Sender guarda os dados de conexão e os dados públicos do remetente, como `fromName`, `fromEmail` e `replyToEmail`.
+
+As campaigns podem usar `smtpSenderId` para definir qual remetente será usado no disparo. O worker usa esse vínculo para enviar cada dispatch pelo SMTP correto.
+
+A referência detalhada está em [SMTP Senders](./control-api/smtp-senders.md).
 
 ### Domínios da CNPJ API
 
