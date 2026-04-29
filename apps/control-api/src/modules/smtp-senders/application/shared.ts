@@ -11,7 +11,7 @@ export type SmtpSenderRecord = {
   host: string;
   port: number;
   secure: boolean;
-  username: string;
+  username: string | null;
   isActive: boolean;
   lastTestedAt: string | null;
   lastTestStatus: string | null;

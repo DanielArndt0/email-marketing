@@ -2,13 +2,14 @@ import type { Pool } from "pg";
 
 import { sendEmail, systemConfig } from "shared";
 
+import { buildSmtpSenderMailConfig } from "../../smtp-senders/application/build-smtp-sender-mail-config.js";
+import { findSmtpSenderById } from "../../smtp-senders/repositories/smtp-sender-repository.js";
 import {
   findEmailDispatchById,
   markEmailDispatchFailed,
   markEmailDispatchProcessing,
   markEmailDispatchSent,
 } from "../repositories/email-dispatch-worker-repository.js";
-import { syncCampaignStatusFromDispatches } from "./sync-campaign-status-from-dispatches.js";
 
 type ProcessEmailDispatchDependencies = {
   pgPool: Pool;
@@ -40,26 +41,45 @@ export async function processEmailDispatch(
   await markEmailDispatchProcessing(dependencies.pgPool, input.dispatchId);
 
   try {
-    const emailInput = {
-      to: dispatch.recipientEmail,
-      subject: dispatch.subject,
-      text: dispatch.textContent ?? systemConfig.mail.fallbackText,
-      ...(dispatch.htmlContent ? { html: dispatch.htmlContent } : {}),
-    };
+    if (!dispatch.smtpSenderId) {
+      throw new Error(
+        `Email dispatch ${input.dispatchId} não possui SMTP sender vinculado.`,
+      );
+    }
 
-    const result = await sendEmail(emailInput);
+    const sender = await findSmtpSenderById(
+      dependencies.pgPool,
+      dispatch.smtpSenderId,
+    );
+
+    if (!sender) {
+      throw new Error(
+        `SMTP sender ${dispatch.smtpSenderId} não encontrado para o dispatch ${input.dispatchId}.`,
+      );
+    }
+
+    if (!sender.isActive) {
+      throw new Error(
+        `SMTP sender ${dispatch.smtpSenderId} está inativo para o dispatch ${input.dispatchId}.`,
+      );
+    }
+
+    const senderConfig = buildSmtpSenderMailConfig(sender);
+
+    const result = await sendEmail(
+      {
+        to: dispatch.recipientEmail,
+        subject: dispatch.subject,
+        text: dispatch.textContent ?? systemConfig.mail.fallbackText,
+        ...(dispatch.htmlContent ? { html: dispatch.htmlContent } : {}),
+      },
+      senderConfig,
+    );
 
     await markEmailDispatchSent(dependencies.pgPool, {
       dispatchId: input.dispatchId,
       providerMessageId: result.messageId,
     });
-
-    await syncCampaignStatusFromDispatches(
-      {
-        pgPool: dependencies.pgPool,
-      },
-      dispatch.campaignId,
-    );
 
     return {
       campaignId: dispatch.campaignId,
@@ -74,13 +94,6 @@ export async function processEmailDispatch(
       dispatchId: input.dispatchId,
       errorMessage,
     });
-
-    await syncCampaignStatusFromDispatches(
-      {
-        pgPool: dependencies.pgPool,
-      },
-      dispatch.campaignId,
-    );
 
     throw error;
   }

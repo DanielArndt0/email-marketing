@@ -12,8 +12,8 @@ const requestBodySchema = z.object({
   host: z.string().min(1),
   port: z.number().int().min(1).max(65535),
   secure: z.boolean(),
-  username: z.string().min(1),
-  password: z.string().min(1),
+  username: z.string().min(1).nullable().optional(),
+  password: z.string().min(1).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

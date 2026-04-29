@@ -6,6 +6,7 @@ export type RawEmailDispatchRow = {
   id: string;
   campaignId: string;
   contactId: string;
+  smtpSenderId: string | null;
   recipientEmail: string;
   subject: string;
   htmlContent: string | null;
@@ -22,6 +23,7 @@ export async function findEmailDispatchById(
         id,
         campaign_id AS "campaignId",
         contact_id AS "contactId",
+        smtp_sender_id AS "smtpSenderId",
         recipient_email AS "recipientEmail",
         subject,
         html_content AS "htmlContent",

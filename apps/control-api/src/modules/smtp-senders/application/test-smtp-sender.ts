@@ -26,6 +26,14 @@ function buildFrom(input: { fromName: string; fromEmail: string }): string {
   return `"${input.fromName.replaceAll('"', "")}" <${input.fromEmail}>`;
 }
 
+function decryptPassword(passwordEncrypted: string | null): string | null {
+  if (!passwordEncrypted) {
+    return null;
+  }
+
+  return decryptSecret(passwordEncrypted, env.SMTP_SENDER_ENCRYPTION_KEY);
+}
+
 export async function testSmtpSender(
   dependencies: TestSmtpSenderDependencies,
   input: TestSmtpSenderInput,
@@ -39,19 +47,19 @@ export async function testSmtpSender(
   const testedAt = new Date().toISOString();
 
   try {
-    const password = decryptSecret(
-      sender.passwordEncrypted,
-      env.SMTP_SENDER_ENCRYPTION_KEY,
-    );
+    const password = decryptPassword(sender.passwordEncrypted);
 
     const transporter = nodemailer.createTransport({
       host: sender.host,
       port: sender.port,
       secure: sender.secure,
-      auth: {
-        user: sender.username,
-        pass: password,
-      },
+      auth:
+        sender.username && password
+          ? {
+              user: sender.username,
+              pass: password,
+            }
+          : undefined,
     });
 
     if (input.to) {

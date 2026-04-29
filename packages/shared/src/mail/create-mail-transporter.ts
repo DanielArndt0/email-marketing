@@ -2,16 +2,31 @@ import nodemailer from "nodemailer";
 
 import { env } from "../config/index.js";
 
-export function createMailTransporter() {
+export type MailTransportConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  username?: string | null | undefined;
+  password?: string | null | undefined;
+};
+
+export function createMailTransporter(config?: MailTransportConfig) {
+  const host = config?.host ?? env.SMTP_HOST;
+  const port = config?.port ?? env.SMTP_PORT;
+  const secure = config?.secure ?? env.SMTP_SECURE;
+
+  const username = config?.username ?? env.SMTP_USER;
+  const password = config?.password ?? env.SMTP_PASSWORD;
+
   return nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
+    host,
+    port,
+    secure,
     auth:
-      env.SMTP_USER && env.SMTP_PASSWORD
+      username && password
         ? {
-            user: env.SMTP_USER,
-            pass: env.SMTP_PASSWORD,
+            user: username,
+            pass: password,
           }
         : undefined,
   });

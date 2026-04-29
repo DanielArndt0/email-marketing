@@ -9,8 +9,8 @@ export type RawSmtpSenderRow = {
   host: string;
   port: number;
   secure: boolean;
-  username: string;
-  passwordEncrypted: string;
+  username: string | null;
+  passwordEncrypted: string | null;
   isActive: boolean;
   lastTestedAt: Date | string | null;
   lastTestStatus: string | null;
@@ -130,8 +130,8 @@ export type InsertSmtpSenderInput = {
   host: string;
   port: number;
   secure: boolean;
-  username: string;
-  passwordEncrypted: string;
+  username?: string | null | undefined;
+  passwordEncrypted?: string | null | undefined;
   isActive: boolean;
 };
 
@@ -180,8 +180,8 @@ export async function insertSmtpSender(
       input.host,
       input.port,
       input.secure,
-      input.username,
-      input.passwordEncrypted,
+      input.username ?? null,
+      input.passwordEncrypted ?? null,
       input.isActive,
     ],
   );
@@ -198,8 +198,8 @@ export type UpdateSmtpSenderInput = {
   host?: string | undefined;
   port?: number | undefined;
   secure?: boolean | undefined;
-  username?: string | undefined;
-  passwordEncrypted?: string | undefined;
+  username?: string | null | undefined;
+  passwordEncrypted?: string | null | undefined;
   isActive?: boolean | undefined;
 };
 

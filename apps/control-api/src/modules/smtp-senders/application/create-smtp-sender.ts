@@ -17,8 +17,8 @@ export type CreateSmtpSenderInput = {
   host: string;
   port: number;
   secure: boolean;
-  username: string;
-  password: string;
+  username?: string | null | undefined;
+  password?: string | null | undefined;
   isActive?: boolean | undefined;
 };
 
@@ -34,11 +34,10 @@ export async function createSmtpSender(
     host: input.host,
     port: input.port,
     secure: input.secure,
-    username: input.username,
-    passwordEncrypted: encryptSecret(
-      input.password,
-      env.SMTP_SENDER_ENCRYPTION_KEY,
-    ),
+    username: input.username ?? null,
+    passwordEncrypted: input.password
+      ? encryptSecret(input.password, env.SMTP_SENDER_ENCRYPTION_KEY)
+      : null,
     isActive: input.isActive ?? true,
   });
 

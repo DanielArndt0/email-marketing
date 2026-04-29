@@ -163,6 +163,7 @@ export async function dispatchCampaign(
             externalId: lead.externalId,
           }),
           to: email,
+          smtpSenderId: campaign.smtpSenderId,
           templateId: campaign.templateId,
           templateVariables,
         },

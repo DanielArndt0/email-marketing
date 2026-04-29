@@ -18,8 +18,8 @@ export type UpdateSmtpSenderInput = {
   host?: string | undefined;
   port?: number | undefined;
   secure?: boolean | undefined;
-  username?: string | undefined;
-  password?: string | undefined;
+  username?: string | null | undefined;
+  password?: string | null | undefined;
   isActive?: boolean | undefined;
 };
 
@@ -42,9 +42,11 @@ export async function updateSmtpSender(
     secure: input.secure,
     username: input.username,
     passwordEncrypted:
-      input.password !== undefined
-        ? encryptSecret(input.password, env.SMTP_SENDER_ENCRYPTION_KEY)
-        : undefined,
+      input.password === undefined
+        ? undefined
+        : input.password
+          ? encryptSecret(input.password, env.SMTP_SENDER_ENCRYPTION_KEY)
+          : null,
     isActive: input.isActive,
   });
 

@@ -29,6 +29,7 @@ export type EnqueueEmailDispatchInput = {
   campaignName: string;
   contactId: string;
   to: string;
+  smtpSenderId?: string | null | undefined;
   templateId?: string | undefined;
   templateVariables?: TemplateVariables | undefined;
   subject?: string | undefined;
@@ -98,6 +99,7 @@ export async function enqueueEmailDispatch(
       campaignId: input.campaignId,
       contactId: input.contactId,
       templateId: input.templateId ?? null,
+      smtpSenderId: input.smtpSenderId ?? null,
       templateVariables: JSON.stringify(templateVariables),
       recipientEmail: input.to,
       subject: resolvedSubject,

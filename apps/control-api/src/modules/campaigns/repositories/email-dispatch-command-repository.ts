@@ -68,6 +68,7 @@ export async function insertEmailDispatch(
     campaignId: string;
     contactId: string;
     templateId: string | null;
+    smtpSenderId: string | null;
     templateVariables: string;
     recipientEmail: string;
     subject: string | null;
@@ -83,6 +84,7 @@ export async function insertEmailDispatch(
         campaign_id,
         contact_id,
         template_id,
+        smtp_sender_id,
         template_variables,
         recipient_email,
         subject,
@@ -90,13 +92,14 @@ export async function insertEmailDispatch(
         text_content,
         status
       )
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11)
     `,
     [
       input.id,
       input.campaignId,
       input.contactId,
       input.templateId,
+      input.smtpSenderId,
       input.templateVariables,
       input.recipientEmail,
       input.subject,
