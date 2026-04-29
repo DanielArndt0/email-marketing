@@ -79,6 +79,7 @@ const environmentSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM_NAME: z.string().default("Mail Engine"),
   SMTP_FROM_EMAIL: z.string().email().default("no-reply@example.com"),
+  SMTP_SENDER_ENCRYPTION_KEY: z.string().min(32),
 
   CNPJ_API_BASE_URL: z.string().url().optional(),
   CNPJ_API_TOKEN: z.string().optional(),
