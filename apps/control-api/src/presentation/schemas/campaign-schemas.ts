@@ -49,6 +49,20 @@ const campaignTemplateSchema = {
   additionalProperties: false,
 } as const;
 
+const campaignSmtpSenderSchema = {
+  type: "object",
+  required: ["id", "name", "fromName", "fromEmail", "replyToEmail", "isActive"],
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    fromName: { type: "string" },
+    fromEmail: { type: "string" },
+    replyToEmail: { type: ["string", "null"] },
+    isActive: { type: "boolean" },
+  },
+  additionalProperties: false,
+} as const;
+
 export const templateVariableMappingSchema = {
   anyOf: [
     {
@@ -98,6 +112,8 @@ export const campaignSchema = {
     "templateVariableMappings",
     "audienceId",
     "audience",
+    "smtpSenderId",
+    "smtpSender",
     "scheduleAt",
     "lastExecutionAt",
     "createdAt",
@@ -128,6 +144,10 @@ export const campaignSchema = {
     templateVariableMappings: templateVariableMappingsSchema,
     audienceId: { type: ["string", "null"] },
     audience: audienceSummarySchema,
+    smtpSenderId: { type: ["string", "null"] },
+    smtpSender: {
+      anyOf: [campaignSmtpSenderSchema, { type: "null" }],
+    },
     scheduleAt: { type: ["string", "null"], format: "date-time" },
     lastExecutionAt: { type: ["string", "null"], format: "date-time" },
     createdAt: { type: "string", format: "date-time" },
@@ -173,6 +193,7 @@ export const createCampaignBodySchema = {
     },
     templateId: { type: ["string", "null"] },
     audienceId: { type: ["string", "null"], examples: ["audience-001"] },
+    smtpSenderId: { type: ["string", "null"] },
     templateVariableMappings: templateVariableMappingsSchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },
@@ -199,6 +220,7 @@ export const updateCampaignBodySchema = {
     },
     templateId: { type: ["string", "null"] },
     audienceId: { type: ["string", "null"] },
+    smtpSenderId: { type: ["string", "null"] },
     templateVariableMappings: templateVariableMappingsSchema,
     scheduleAt: { type: ["string", "null"], format: "date-time" },
   },

@@ -38,6 +38,7 @@ export const createCampaignBodySchema = z.object({
   status: z.enum(CAMPAIGN_STATUSES).default("draft"),
   templateId: z.string().min(1).nullable().optional(),
   audienceId: z.string().min(1).nullable().optional(),
+  smtpSenderId: z.string().min(1).nullable().optional(),
   templateVariableMappings: templateVariableMappingsSchema.optional(),
   scheduleAt: z.iso.datetime().nullable().optional(),
 });
@@ -50,6 +51,7 @@ export const updateCampaignBodySchema = z
     status: z.enum(CAMPAIGN_STATUSES).optional(),
     templateId: z.union([z.string().min(1), z.null()]).optional(),
     audienceId: z.union([z.string().min(1), z.null()]).optional(),
+    smtpSenderId: z.union([z.string().min(1), z.null()]).optional(),
     templateVariableMappings: templateVariableMappingsSchema.optional(),
     scheduleAt: z.union([z.iso.datetime(), z.null()]).optional(),
   })

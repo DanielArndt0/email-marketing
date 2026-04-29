@@ -33,6 +33,16 @@ export type CampaignRecord = {
         description: string | null;
       } & AudienceDefinition)
     | null;
+
+  smtpSenderId: string | null;
+  smtpSender: {
+    id: string;
+    name: string;
+    fromName: string;
+    fromEmail: string;
+    replyToEmail: string | null;
+    isActive: boolean;
+  } | null;
   scheduleAt: string | null;
   lastExecutionAt: string | null;
   createdAt: string;
@@ -97,6 +107,30 @@ function toTemplateRecord(row: RawCampaignRow): CampaignRecord["template"] {
   };
 }
 
+function toSmtpSenderRecord(row: RawCampaignRow): CampaignRecord["smtpSender"] {
+  if (!row.smtpSenderId) {
+    return null;
+  }
+
+  if (
+    !row.smtpSenderName ||
+    !row.smtpSenderFromName ||
+    !row.smtpSenderFromEmail ||
+    row.smtpSenderIsActive === null
+  ) {
+    return null;
+  }
+
+  return {
+    id: row.smtpSenderId,
+    name: row.smtpSenderName,
+    fromName: row.smtpSenderFromName,
+    fromEmail: row.smtpSenderFromEmail,
+    replyToEmail: row.smtpSenderReplyToEmail,
+    isActive: row.smtpSenderIsActive,
+  };
+}
+
 function toTemplateVariableMappings(value: unknown): TemplateVariableMappings {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return {};
@@ -119,6 +153,8 @@ export function mapCampaignRow(row: RawCampaignRow): CampaignRecord {
     ),
     audienceId: row.audienceId,
     audience: toAudienceRecord(row),
+    smtpSenderId: row.smtpSenderId,
+    smtpSender: toSmtpSenderRecord(row),
     scheduleAt: normalizeDateValue(row.scheduleAt),
     lastExecutionAt: normalizeDateValue(row.lastExecutionAt),
     createdAt: normalizeDateValue(row.createdAt) ?? "",

@@ -38,6 +38,14 @@ export type DispatchCampaignResult =
       campaignId: string;
     }
   | {
+      kind: "missing_smtp_sender";
+      campaignId: string;
+    }
+  | {
+      kind: "inactive_smtp_sender";
+      campaignId: string;
+    }
+  | {
       kind: "accepted";
       campaignId: string;
       resolvedRecipientsCount: number;
@@ -93,6 +101,20 @@ export async function dispatchCampaign(
   if (!campaign.audienceId || !campaign.audience) {
     return {
       kind: "missing_audience",
+      campaignId: campaign.id,
+    };
+  }
+
+  if (!campaign.smtpSenderId || !campaign.smtpSender) {
+    return {
+      kind: "missing_smtp_sender",
+      campaignId: campaign.id,
+    };
+  }
+
+  if (!campaign.smtpSender.isActive) {
+    return {
+      kind: "inactive_smtp_sender",
       campaignId: campaign.id,
     };
   }

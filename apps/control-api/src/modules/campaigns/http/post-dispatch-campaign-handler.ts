@@ -57,6 +57,18 @@ export function createPostDispatchCampaignHandler(
       });
     }
 
+    if (result.kind === "missing_smtp_sender") {
+      return reply.status(409).send({
+        message: "A campaign não possui SMTP sender vinculado.",
+      });
+    }
+
+    if (result.kind === "inactive_smtp_sender") {
+      return reply.status(409).send({
+        message: "O SMTP sender vinculado à campaign está inativo.",
+      });
+    }
+
     return reply.status(202).send(result);
   };
 }

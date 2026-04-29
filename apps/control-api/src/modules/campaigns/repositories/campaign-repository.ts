@@ -2,9 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
-import type { TemplateVariableMappings } from "core";
-
-import type { CampaignStatus } from "core";
+import type { CampaignStatus, TemplateVariableMappings } from "core";
 
 type CountRow = { total: string };
 
@@ -48,12 +46,56 @@ export type RawCampaignRow = {
   audienceSourceType: string | null;
   audienceFilters: Record<string, unknown> | null;
 
+  smtpSenderId: string | null;
+  smtpSenderName: string | null;
+  smtpSenderFromName: string | null;
+  smtpSenderFromEmail: string | null;
+  smtpSenderReplyToEmail: string | null;
+  smtpSenderIsActive: boolean | null;
+
   templateVariableMappings: unknown;
   scheduleAt: Date | string | null;
   lastExecutionAt: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 };
+
+const CAMPAIGN_SELECT = `
+  SELECT
+    c.id,
+    c.name,
+    c.goal,
+    c.subject,
+    c.status,
+    c.template_id AS "templateId",
+
+    t.name AS "templateName",
+    t.subject AS "templateSubject",
+    t.variables AS "templateVariables",
+
+    c.audience_id AS "audienceId",
+    a.name AS "audienceName",
+    a.description AS "audienceDescription",
+    a.source_type AS "audienceSourceType",
+    a.filters AS "audienceFilters",
+
+    c.smtp_sender_id AS "smtpSenderId",
+    ss.name AS "smtpSenderName",
+    ss.from_name AS "smtpSenderFromName",
+    ss.from_email AS "smtpSenderFromEmail",
+    ss.reply_to_email AS "smtpSenderReplyToEmail",
+    ss.is_active AS "smtpSenderIsActive",
+
+    c.template_variable_mappings AS "templateVariableMappings",
+    c.schedule_at AS "scheduleAt",
+    c.last_execution_at AS "lastExecutionAt",
+    c.created_at AS "createdAt",
+    c.updated_at AS "updatedAt"
+  FROM campaigns c
+  LEFT JOIN templates t ON t.id = c.template_id
+  LEFT JOIN audiences a ON a.id = c.audience_id
+  LEFT JOIN smtp_senders ss ON ss.id = c.smtp_sender_id
+`;
 
 export async function insertCampaign(
   pgPool: Pool,
@@ -64,6 +106,7 @@ export async function insertCampaign(
     status: string;
     templateId?: string | null | undefined;
     audienceId?: string | null | undefined;
+    smtpSenderId?: string | null | undefined;
     templateVariableMappings?: TemplateVariableMappings | undefined;
     scheduleAt?: string | null | undefined;
   },
@@ -80,10 +123,11 @@ export async function insertCampaign(
         status,
         template_id,
         audience_id,
+        smtp_sender_id,
         template_variable_mappings,
         schedule_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
       RETURNING id
     `,
     [
@@ -94,6 +138,7 @@ export async function insertCampaign(
       input.status,
       input.templateId ?? null,
       input.audienceId ?? null,
+      input.smtpSenderId ?? null,
       JSON.stringify(input.templateVariableMappings ?? {}),
       input.scheduleAt ?? null,
     ],
@@ -144,29 +189,7 @@ export async function listCampaignsPage(
 
   const listResult = await pgPool.query<RawCampaignRow>(
     `
-      SELECT
-        c.id,
-        c.name,
-        c.goal,
-        c.subject,
-        c.status,
-        c.template_id AS "templateId",
-        t.name AS "templateName",
-        t.subject AS "templateSubject",
-        t.variables AS "templateVariables",
-        c.template_variable_mappings AS "templateVariableMappings",
-        c.audience_id AS "audienceId",
-        a.name AS "audienceName",
-        a.description AS "audienceDescription",
-        a.source_type AS "audienceSourceType",
-        a.filters AS "audienceFilters",
-        c.schedule_at AS "scheduleAt",
-        c.last_execution_at AS "lastExecutionAt",
-        c.created_at AS "createdAt",
-        c.updated_at AS "updatedAt"
-      FROM campaigns c
-      LEFT JOIN templates t ON t.id = c.template_id
-      LEFT JOIN audiences a ON a.id = c.audience_id
+      ${CAMPAIGN_SELECT}
       ${whereClause}
       ORDER BY c.created_at DESC
       LIMIT $${listValues.length - 1}
@@ -187,29 +210,7 @@ export async function findCampaignById(
 ): Promise<RawCampaignRow | null> {
   const result = await pgPool.query<RawCampaignRow>(
     `
-      SELECT
-        c.id,
-        c.name,
-        c.goal,
-        c.subject,
-        c.status,
-        c.template_id AS "templateId",
-        t.name AS "templateName",
-        t.subject AS "templateSubject",
-        t.variables AS "templateVariables",
-        c.template_variable_mappings AS "templateVariableMappings",
-        c.audience_id AS "audienceId",
-        a.name AS "audienceName",
-        a.description AS "audienceDescription",
-        a.source_type AS "audienceSourceType",
-        a.filters AS "audienceFilters",
-        c.schedule_at AS "scheduleAt",
-        c.last_execution_at AS "lastExecutionAt",
-        c.created_at AS "createdAt",
-        c.updated_at AS "updatedAt"
-      FROM campaigns c
-      LEFT JOIN templates t ON t.id = c.template_id
-      LEFT JOIN audiences a ON a.id = c.audience_id
+      ${CAMPAIGN_SELECT}
       WHERE c.id = $1
       LIMIT 1
     `,
@@ -229,6 +230,7 @@ export async function updateCampaignById(
     status?: string | undefined;
     templateId?: string | null | undefined;
     audienceId?: string | null | undefined;
+    smtpSenderId?: string | null | undefined;
     templateVariableMappings?: TemplateVariableMappings | undefined;
     scheduleAt?: string | null | undefined;
   },
@@ -264,6 +266,11 @@ export async function updateCampaignById(
   if (input.audienceId !== undefined) {
     values.push(input.audienceId);
     fields.push(`audience_id = $${values.length}`);
+  }
+
+  if (input.smtpSenderId !== undefined) {
+    values.push(input.smtpSenderId);
+    fields.push(`smtp_sender_id = $${values.length}`);
   }
 
   if (input.templateVariableMappings !== undefined) {
