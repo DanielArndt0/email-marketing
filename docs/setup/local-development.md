@@ -145,7 +145,6 @@ Se o worker estiver rodando dentro do Docker Compose, use o nome do serviço com
 }
 ```
 
-
 O Mailpit é o servidor SMTP local de desenvolvimento usado para capturar os e-mails enviados pela aplicação.
 
 ### Portas do Mailpit

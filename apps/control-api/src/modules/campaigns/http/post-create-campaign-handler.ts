@@ -17,7 +17,17 @@ export function createPostCreateCampaignHandler(
   ) {
     const body = createCampaignBodySchema.parse(request.body);
 
-    const result = await createCampaign(dependencies, body);
+    const result = await createCampaign(dependencies, {
+      name: body.name,
+      goal: body.goal,
+      subject: body.subject,
+      status: body.status,
+      templateId: body.templateId,
+      audienceId: body.audienceId,
+      smtpSenderId: body.smtpSenderId,
+      templateVariableMappings: body.templateVariableMappings,
+      scheduleAt: body.scheduleAt,
+    });
 
     if (result.kind === "template_not_found") {
       return reply.status(404).send({
@@ -28,6 +38,12 @@ export function createPostCreateCampaignHandler(
     if (result.kind === "audience_not_found") {
       return reply.status(404).send({
         message: "Audience não encontrada.",
+      });
+    }
+
+    if (result.kind === "smtp_sender_not_found") {
+      return reply.status(404).send({
+        message: "SMTP sender não encontrado.",
       });
     }
 

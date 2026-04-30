@@ -89,7 +89,7 @@ export async function enqueueEmailDispatch(
       subject: resolvedSubject,
     });
 
-    await upsertContact(client, {
+    const contactId = await upsertContact(client, {
       id: input.contactId,
       email: input.to,
     });
@@ -97,7 +97,7 @@ export async function enqueueEmailDispatch(
     await insertEmailDispatch(client, {
       id: dispatchId,
       campaignId: input.campaignId,
-      contactId: input.contactId,
+      contactId,
       templateId: input.templateId ?? null,
       smtpSenderId: input.smtpSenderId ?? null,
       templateVariables: JSON.stringify(templateVariables),

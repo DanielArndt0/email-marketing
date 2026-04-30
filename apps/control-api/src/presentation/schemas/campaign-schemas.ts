@@ -112,6 +112,7 @@ export const campaignSchema = {
     "templateVariableMappings",
     "audienceId",
     "audience",
+    "template",
     "smtpSenderId",
     "smtpSender",
     "scheduleAt",

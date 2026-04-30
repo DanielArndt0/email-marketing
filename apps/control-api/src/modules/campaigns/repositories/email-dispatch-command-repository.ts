@@ -48,17 +48,20 @@ export async function upsertCampaign(
 export async function upsertContact(
   client: PoolClient,
   input: { id: string; email: string },
-): Promise<void> {
-  await client.query(
+): Promise<string> {
+  const result = await client.query<{ id: string }>(
     `
       INSERT INTO contacts (id, email)
       VALUES ($1, $2)
-      ON CONFLICT (id)
+      ON CONFLICT (email)
       DO UPDATE SET
         email = EXCLUDED.email
+      RETURNING id
     `,
     [input.id, input.email],
   );
+
+  return result.rows[0]!.id;
 }
 
 export async function insertEmailDispatch(

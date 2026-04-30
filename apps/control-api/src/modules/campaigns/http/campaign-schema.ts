@@ -11,30 +11,37 @@ const audienceSummarySchema = z
   })
   .nullable();
 
-const leadTemplateVariableMappingSchema = z.object({
-  source: z.literal("lead"),
-  path: z.string().min(1),
-  fallback: z.string().min(1).optional(),
-});
+const campaignSmtpSenderSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    fromName: z.string().min(1),
+    fromEmail: z.string().min(1),
+    replyToEmail: z.string().nullable(),
+    isActive: z.boolean(),
+  })
+  .nullable();
 
-const staticTemplateVariableMappingSchema = z.object({
-  source: z.literal("static"),
-  value: z.string(),
-});
-
-const templateVariableMappingSchema = z.discriminatedUnion("source", [
-  leadTemplateVariableMappingSchema,
-  staticTemplateVariableMappingSchema,
+const templateVariableMappingSchema = z.union([
+  z.object({
+    source: z.literal("lead"),
+    path: z.string().min(1),
+    fallback: z.string().optional(),
+  }),
+  z.object({
+    source: z.literal("static"),
+    value: z.string(),
+  }),
 ]);
 
 const templateVariableMappingsSchema = z
-  .record(z.string().min(1), templateVariableMappingSchema)
+  .record(z.string(), templateVariableMappingSchema)
   .default({});
 
 export const createCampaignBodySchema = z.object({
   name: z.string().min(1),
   subject: z.union([z.string().min(1), z.null()]).optional(),
-  goal: z.string().min(1).optional(),
+  goal: z.union([z.string().min(1), z.null()]).optional(),
   status: z.enum(CAMPAIGN_STATUSES).default("draft"),
   templateId: z.string().min(1).nullable().optional(),
   audienceId: z.string().min(1).nullable().optional(),
@@ -63,6 +70,7 @@ export const updateCampaignBodySchema = z
       data.status !== undefined ||
       data.templateId !== undefined ||
       data.audienceId !== undefined ||
+      data.smtpSenderId !== undefined ||
       data.templateVariableMappings !== undefined ||
       data.scheduleAt !== undefined,
     { message: "É necessário informar ao menos um campo para atualização." },
@@ -86,9 +94,10 @@ export const campaignSchema = z.object({
   goal: z.string().nullable(),
   status: z.enum(CAMPAIGN_STATUSES),
   templateId: z.string().nullable(),
-  templateVariableMappings: z.record(z.string(), templateVariableMappingSchema),
   audienceId: z.string().nullable(),
   audience: audienceSummarySchema,
+  smtpSenderId: z.string().nullable(),
+  smtpSender: campaignSmtpSenderSchema,
   scheduleAt: z.string().nullable(),
   lastExecutionAt: z.string().nullable(),
   createdAt: z.string(),

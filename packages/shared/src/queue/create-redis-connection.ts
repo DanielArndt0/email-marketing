@@ -6,7 +6,7 @@ export function createRedisConnection() {
   // Workaround para o erro de tipagem:
   // "This expression is not constructable"
   // em projetos ESM com TypeScript usando NodeNext/Node16.
-  
+
   // Referência:
   // https://github.com/redis/ioredis/issues/1624
 

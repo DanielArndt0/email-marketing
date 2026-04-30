@@ -101,7 +101,7 @@ export async function insertCampaign(
   pgPool: Pool,
   input: {
     name: string;
-    goal?: string | undefined;
+    goal?: string | null | undefined;
     subject?: string | null | undefined;
     status: string;
     templateId?: string | null | undefined;

@@ -4,6 +4,7 @@ import type { CampaignStatus, TemplateVariableMappings } from "core";
 
 import { findAudienceById } from "../../audiences/repositories/audience-repository.js";
 import { findTemplateById } from "../../templates/repositories/template-repository.js";
+import { findSmtpSenderById } from "../../smtp-senders/repositories/smtp-sender-repository.js";
 import { updateCampaignById } from "../repositories/campaign-repository.js";
 import { mapCampaignRow, type CampaignRecord } from "./shared.js";
 
@@ -19,6 +20,7 @@ export type UpdateCampaignInput = {
   status?: CampaignStatus | undefined;
   templateId?: string | null | undefined;
   audienceId?: string | null | undefined;
+  smtpSenderId?: string | null | undefined;
   templateVariableMappings?: TemplateVariableMappings | undefined;
   scheduleAt?: string | null | undefined;
 };
@@ -27,6 +29,7 @@ export type UpdateCampaignResult =
   | { kind: "not_found" }
   | { kind: "template_not_found" }
   | { kind: "audience_not_found" }
+  | { kind: "smtp_sender_not_found" }
   | { kind: "updated"; campaign: CampaignRecord };
 
 export async function updateCampaign(
@@ -55,7 +58,29 @@ export async function updateCampaign(
     }
   }
 
-  const updated = await updateCampaignById(dependencies.pgPool, input);
+  if (input.smtpSenderId) {
+    const smtpSender = await findSmtpSenderById(
+      dependencies.pgPool,
+      input.smtpSenderId,
+    );
+
+    if (!smtpSender) {
+      return { kind: "smtp_sender_not_found" };
+    }
+  }
+
+  const updated = await updateCampaignById(dependencies.pgPool, {
+    id: input.id,
+    name: input.name,
+    goal: input.goal,
+    subject: input.subject,
+    status: input.status,
+    templateId: input.templateId,
+    audienceId: input.audienceId,
+    smtpSenderId: input.smtpSenderId,
+    templateVariableMappings: input.templateVariableMappings,
+    scheduleAt: input.scheduleAt,
+  });
 
   if (!updated) {
     return { kind: "not_found" };
