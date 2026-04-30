@@ -34,8 +34,9 @@ Atualmente, o sistema funciona assim:
 A `control-api` está organizada em três áreas principais:
 
 - `main/`: bootstrap da aplicação
-- `presentation/`: rotas HTTP
+- `presentation/`: rotas HTTP e schemas OpenAPI
 - `modules/`: módulos funcionais do sistema
+- `shared/`: helpers internos da própria API, como persistência e paginação
 
 Dentro de cada módulo, a estrutura atual está organizada em:
 
@@ -108,6 +109,15 @@ Responsável por listagem, consulta por ID e retry.
 
 Responsável por CRUD parcial de templates e integração com dispatch.
 
+## Melhorias estruturais aplicadas
+
+- repositórios com builders SQL internos para reduzir duplicação em filtros, contadores e updates dinâmicos
+- constantes de seleção SQL para evitar divergência entre `list`, `find` e `update`
+- runner de migrations com um único `Pool`, conexão reaproveitada e transação por migration
+- export do pacote `shared` com entrada explícita para tipos e import ESM
+- contrato de jobs do worker alinhado ao `shared`, evitando constante de fila duplicada
+- documentação com roadmap criado e links de navegação consistentes
+
 ## Pontos fortes atuais
 
 - fluxo principal funcional ponta a ponta
@@ -123,5 +133,6 @@ Responsável por CRUD parcial de templates e integração com dispatch.
 - ainda não há autenticação/autorização
 - ainda não há testes automatizados
 - ainda não existe camada explícita de entidades e value objects do domínio
-- não há padronização de erro de aplicação
+- não há padronização robusta de erro de aplicação
 - a documentação ainda precisa crescer junto com os módulos
+- a padronização de erros HTTP ainda pode evoluir para schemas e helpers comuns

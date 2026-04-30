@@ -1,1 +1,1 @@
-export const EMAIL_DISPATCH_QUEUE_NAME = "email-dispatch";
+export { EMAIL_DISPATCH_QUEUE_NAME, type EmailDispatchJobData } from "shared";

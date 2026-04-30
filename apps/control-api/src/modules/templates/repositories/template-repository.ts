@@ -4,6 +4,11 @@ import type { Pool } from "pg";
 
 import type { TemplateVariable } from "core";
 
+import {
+  addUpdateAssignment,
+  readCount,
+} from "../../../shared/persistence/sql-builders.js";
+
 export type RawTemplateRow = {
   id: string;
   name: string;
@@ -25,6 +30,17 @@ type TemplateMutationInput = {
   variables?: TemplateVariable[] | undefined;
 };
 
+const TEMPLATE_COLUMNS = `
+  id,
+  name,
+  subject,
+  html_content AS "htmlContent",
+  text_content AS "textContent",
+  variables,
+  created_at AS "createdAt",
+  updated_at AS "updatedAt"
+`;
+
 export async function insertTemplate(
   pgPool: Pool,
   input: TemplateMutationInput,
@@ -42,15 +58,7 @@ export async function insertTemplate(
         variables
       )
       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-      RETURNING
-        id,
-        name,
-        subject,
-        html_content AS "htmlContent",
-        text_content AS "textContent",
-        variables,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      RETURNING ${TEMPLATE_COLUMNS}
     `,
     [
       id,
@@ -80,15 +88,7 @@ export async function listTemplatesPage(
 
   const listResult = await pgPool.query<RawTemplateRow>(
     `
-      SELECT
-        id,
-        name,
-        subject,
-        html_content AS "htmlContent",
-        text_content AS "textContent",
-        variables,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      SELECT ${TEMPLATE_COLUMNS}
       FROM templates
       ORDER BY created_at DESC
       LIMIT $1
@@ -99,7 +99,7 @@ export async function listTemplatesPage(
 
   return {
     items: listResult.rows,
-    total: Number(countResult.rows[0]?.total ?? "0"),
+    total: readCount(countResult.rows[0]),
   };
 }
 
@@ -109,15 +109,7 @@ export async function findTemplateById(
 ): Promise<RawTemplateRow | null> {
   const result = await pgPool.query<RawTemplateRow>(
     `
-      SELECT
-        id,
-        name,
-        subject,
-        html_content AS "htmlContent",
-        text_content AS "textContent",
-        variables,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      SELECT ${TEMPLATE_COLUMNS}
       FROM templates
       WHERE id = $1
       LIMIT 1
@@ -139,51 +131,68 @@ export async function updateTemplateById(
     variables?: TemplateVariable[] | undefined;
   },
 ): Promise<RawTemplateRow | null> {
-  const fields: string[] = [];
+  const assignments: string[] = [];
   const values: unknown[] = [];
 
   if (input.name !== undefined) {
-    values.push(input.name);
-    fields.push(`name = $${values.length}`);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "name",
+      value: input.name,
+    });
   }
 
   if (input.subject !== undefined) {
-    values.push(input.subject);
-    fields.push(`subject = $${values.length}`);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "subject",
+      value: input.subject,
+    });
   }
 
   if (input.htmlContent !== undefined) {
-    values.push(input.htmlContent);
-    fields.push(`html_content = $${values.length}`);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "html_content",
+      value: input.htmlContent,
+    });
   }
 
   if (input.textContent !== undefined) {
-    values.push(input.textContent);
-    fields.push(`text_content = $${values.length}`);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "text_content",
+      value: input.textContent,
+    });
   }
 
   if (input.variables !== undefined) {
-    values.push(JSON.stringify(input.variables));
-    fields.push(`variables = $${values.length}::jsonb`);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "variables",
+      value: JSON.stringify(input.variables),
+      cast: "::jsonb",
+    });
   }
 
-  fields.push(`updated_at = NOW()`);
+  if (assignments.length === 0) {
+    return findTemplateById(pgPool, input.id);
+  }
+
+  assignments.push("updated_at = NOW()");
   values.push(input.id);
 
   const result = await pgPool.query<RawTemplateRow>(
     `
       UPDATE templates
-      SET ${fields.join(", ")}
+      SET ${assignments.join(", ")}
       WHERE id = $${values.length}
-      RETURNING
-        id,
-        name,
-        subject,
-        html_content AS "htmlContent",
-        text_content AS "textContent",
-        variables,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      RETURNING ${TEMPLATE_COLUMNS}
     `,
     values,
   );
@@ -219,5 +228,5 @@ export async function countCampaignsByTemplateId(
     [templateId],
   );
 
-  return Number(result.rows[0]?.total ?? "0");
+  return readCount(result.rows[0]);
 }

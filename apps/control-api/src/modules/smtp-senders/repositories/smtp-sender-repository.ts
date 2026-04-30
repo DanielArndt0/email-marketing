@@ -1,5 +1,12 @@
 import type { Pool } from "pg";
 
+import {
+  addUpdateAssignment,
+  addWhereCondition,
+  buildWhereClause,
+  readCount,
+} from "../../../shared/persistence/sql-builders.js";
+
 export type RawSmtpSenderRow = {
   id: string;
   name: string;
@@ -50,17 +57,32 @@ export type ListSmtpSendersFilters = {
   isActive?: boolean | undefined;
 };
 
+function buildSmtpSenderFilters(
+  filters: Omit<ListSmtpSendersFilters, "page" | "pageSize">,
+): { whereClause: string; values: unknown[] } {
+  const values: unknown[] = [];
+  const conditions: string[] = [];
+
+  if (filters.isActive !== undefined) {
+    addWhereCondition({
+      conditions,
+      values,
+      condition: (param) => `is_active = ${param}`,
+      value: filters.isActive,
+    });
+  }
+
+  return {
+    whereClause: buildWhereClause(conditions),
+    values,
+  };
+}
+
 export async function listSmtpSenders(
   pgPool: Pool,
   filters: ListSmtpSendersFilters,
 ): Promise<RawSmtpSenderRow[]> {
-  const where: string[] = [];
-  const values: unknown[] = [];
-
-  if (filters.isActive !== undefined) {
-    values.push(filters.isActive);
-    where.push(`is_active = $${values.length}`);
-  }
+  const { whereClause, values } = buildSmtpSenderFilters(filters);
 
   values.push(filters.pageSize);
   const limitParam = values.length;
@@ -71,7 +93,7 @@ export async function listSmtpSenders(
   const result = await pgPool.query<RawSmtpSenderRow>(
     `
       ${SMTP_SENDER_SELECT}
-      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+      ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${limitParam}
       OFFSET $${offsetParam}
@@ -86,24 +108,18 @@ export async function countSmtpSenders(
   pgPool: Pool,
   filters: Omit<ListSmtpSendersFilters, "page" | "pageSize">,
 ): Promise<number> {
-  const where: string[] = [];
-  const values: unknown[] = [];
-
-  if (filters.isActive !== undefined) {
-    values.push(filters.isActive);
-    where.push(`is_active = $${values.length}`);
-  }
+  const { whereClause, values } = buildSmtpSenderFilters(filters);
 
   const result = await pgPool.query<CountRow>(
     `
       SELECT COUNT(*)::text AS total
       FROM smtp_senders
-      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+      ${whereClause}
     `,
     values,
   );
 
-  return Number(result.rows[0]?.total ?? "0");
+  return readCount(result.rows[0]);
 }
 
 export async function findSmtpSenderById(
@@ -207,40 +223,101 @@ export async function updateSmtpSenderById(
   pgPool: Pool,
   input: UpdateSmtpSenderInput,
 ): Promise<RawSmtpSenderRow | null> {
-  const sets: string[] = [];
+  const assignments: string[] = [];
   const values: unknown[] = [];
 
-  function addSet(column: string, value: unknown): void {
-    values.push(value);
-    sets.push(`${column} = $${values.length}`);
+  if (input.name !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "name",
+      value: input.name,
+    });
   }
-
-  if (input.name !== undefined) addSet("name", input.name);
-  if (input.fromName !== undefined) addSet("from_name", input.fromName);
-  if (input.fromEmail !== undefined) addSet("from_email", input.fromEmail);
-  if (input.replyToEmail !== undefined)
-    addSet("reply_to_email", input.replyToEmail);
-  if (input.host !== undefined) addSet("host", input.host);
-  if (input.port !== undefined) addSet("port", input.port);
-  if (input.secure !== undefined) addSet("secure", input.secure);
-  if (input.username !== undefined) addSet("username", input.username);
+  if (input.fromName !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "from_name",
+      value: input.fromName,
+    });
+  }
+  if (input.fromEmail !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "from_email",
+      value: input.fromEmail,
+    });
+  }
+  if (input.replyToEmail !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "reply_to_email",
+      value: input.replyToEmail,
+    });
+  }
+  if (input.host !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "host",
+      value: input.host,
+    });
+  }
+  if (input.port !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "port",
+      value: input.port,
+    });
+  }
+  if (input.secure !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "secure",
+      value: input.secure,
+    });
+  }
+  if (input.username !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "username",
+      value: input.username,
+    });
+  }
   if (input.passwordEncrypted !== undefined) {
-    addSet("password_encrypted", input.passwordEncrypted);
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "password_encrypted",
+      value: input.passwordEncrypted,
+    });
   }
-  if (input.isActive !== undefined) addSet("is_active", input.isActive);
+  if (input.isActive !== undefined) {
+    addUpdateAssignment({
+      assignments,
+      values,
+      column: "is_active",
+      value: input.isActive,
+    });
+  }
 
-  if (sets.length === 0) {
+  if (assignments.length === 0) {
     return findSmtpSenderById(pgPool, input.id);
   }
 
+  assignments.push("updated_at = NOW()");
   values.push(input.id);
 
   const result = await pgPool.query<RawSmtpSenderRow>(
     `
       UPDATE smtp_senders
-      SET
-        ${sets.join(", ")},
-        updated_at = NOW()
+      SET ${assignments.join(", ")}
       WHERE id = $${values.length}
       RETURNING
         id,
@@ -292,7 +369,7 @@ export async function countCampaignsBySmtpSenderId(
     [smtpSenderId],
   );
 
-  return Number(result.rows[0]?.total ?? "0");
+  return readCount(result.rows[0]);
 }
 
 export async function updateSmtpSenderTestResult(
