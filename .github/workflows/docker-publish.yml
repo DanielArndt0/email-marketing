@@ -30,6 +30,10 @@ jobs:
             image: ghcr.io/danielarndt0/dispatch-worker
             dockerfile: Dockerfile.dispatch-worker
 
+          - name: PostgreSQL
+            image: ghcr.io/danielarndt0/email-marketing-postgres
+            dockerfile: Dockerfile.postgres
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:16
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    image: email-marketing-postgres:local
     container_name: postgres
     restart: unless-stopped
     environment:
@@ -11,7 +14,6 @@ services:
       - "5433:5432"
     volumes:
       - email_marketing_pgdata:/var/lib/postgresql/data
-      - ./infra/database/migrations:/docker-entrypoint-initdb.d:ro
 
   redis:
     image: redis:7

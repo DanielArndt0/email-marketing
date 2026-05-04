@@ -61,13 +61,13 @@ const environmentSchema = z.object({
     .default("info"),
 
   API_PORT: z.coerce.number().int().positive().default(3333),
-  CORS_ORIGINS: z.string().default("http://localhost:3000"),
+  CORS_ORIGINS: z.string().default("http://localhost:3001"),
 
   POSTGRES_HOST: z.string().default("localhost"),
   POSTGRES_PORT: z.coerce.number().int().positive().default(5432),
   POSTGRES_DB: z.string().default("email_marketing"),
-  POSTGRES_USER: z.string().default("postgres"),
-  POSTGRES_PASSWORD: z.string().default("postgres"),
+  POSTGRES_USER: z.string().default("email_marketing"),
+  POSTGRES_PASSWORD: z.string().default("email_marketing"),
 
   REDIS_HOST: z.string().default("localhost"),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
