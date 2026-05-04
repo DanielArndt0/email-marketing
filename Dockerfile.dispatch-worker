@@ -1,0 +1,39 @@
+FROM node:24-alpine AS deps
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY apps/control-api/package*.json ./apps/control-api/
+COPY apps/dispatch-worker/package*.json ./apps/dispatch-worker/
+COPY packages/core/package*.json ./packages/core/
+COPY packages/shared/package*.json ./packages/shared/
+
+RUN npm ci
+
+
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build -w packages/shared
+RUN npm run build -w packages/core
+RUN npm run build -w apps/dispatch-worker
+
+
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+COPY --from=deps /app/node_modules ./node_modules
+
+COPY --from=build /app/config ./config
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/dispatch-worker ./apps/dispatch-worker
+
+CMD ["npm", "run", "start", "-w", "apps/dispatch-worker"]

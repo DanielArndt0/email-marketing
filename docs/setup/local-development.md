@@ -1,48 +1,56 @@
 # Desenvolvimento local
 
-Este documento descreve a preparação básica do ambiente local do projeto.
+Este documento descreve os modos de execução local do projeto.
+
+O projeto pode ser executado de duas formas:
+
+1. **Aplicação local com infraestrutura no Docker**: API e worker rodam na máquina; PostgreSQL, Redis e Mailpit rodam em containers.
+2. **Stack completa dockerizada**: API, worker, PostgreSQL, Redis e Mailpit rodam em containers.
+
+Para detalhes completos de Docker, Compose, portas, `.env` e `.env.docker`, consulte também [Docker e infraestrutura local](./docker.md).
 
 ## Pré-requisitos
 
 Para executar o projeto localmente, é esperado ter instalado:
 
-- Node.js
-- npm
-- Docker Desktop
+- Node.js;
+- npm;
+- Docker Desktop.
 
-## Serviços locais do projeto
+## Arquivos principais
 
-O ambiente local atual utiliza containers para os serviços de infraestrutura:
+```text
+infra/
+├─ compose.infra.local.yaml
+└─ compose.infra-dockerized.yaml
 
-- PostgreSQL
-- Redis
-- Mailpit
+Dockerfile.control-api
+Dockerfile.dispatch-worker
+.env.example
+.env.docker.example
+```
 
-A subida desses serviços é feita pelo arquivo `infra/compose.yaml`.
+## Modo 1: aplicação local com infraestrutura no Docker
 
-## Portas padrão do ambiente local
+Use este modo durante o desenvolvimento diário.
 
-Com a configuração atual do `compose.yaml`, os serviços ficam expostos assim:
+Nesse cenário, o Docker sobe apenas:
 
-- PostgreSQL: `localhost:5433`
-- Redis: `localhost:6379`
-- Mailpit SMTP: `localhost:1025`
-- Mailpit Web UI: `localhost:8025`
+- PostgreSQL;
+- Redis;
+- Mailpit.
 
-## Observação sobre portas
+A Control API e o Dispatch Worker rodam fora do Docker, com Node.js, usando os scripts do monorepo.
 
-A porta do PostgreSQL foi configurada como `5433` no host para evitar conflito com instalações locais de PostgreSQL já rodando na máquina.
+### Subir a infraestrutura
 
-Essa escolha permite coexistência entre:
+Na raiz do projeto:
 
-- PostgreSQL local da máquina
-- PostgreSQL dockerizado do projeto
+```bash
+docker compose -f infra/compose.infra.local.yaml up -d
+```
 
-Se houver conflito com Redis ou outros serviços no seu ambiente, o mesmo princípio pode ser aplicado ajustando a porta publicada no `compose.yaml` e refletindo o valor no `.env`.
-
-## Variáveis de ambiente
-
-Antes de executar o projeto, crie um arquivo `.env` na raiz do repositório com base no arquivo `.env.example`.
+### Criar o `.env`
 
 No Windows PowerShell:
 
@@ -50,79 +58,140 @@ No Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Depois disso, ajuste os valores do `.env` conforme o seu ambiente local.
-
-### Valores esperados no ambiente atual
-
-Exemplo de referência para o setup local com Docker:
+Valores típicos para esse modo:
 
 ```env
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
 POSTGRES_DB=email_marketing
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_USER=email_marketing
+POSTGRES_PASSWORD=email_marketing
 
 REDIS_HOST=localhost
-REDIS_PORT=6379
+REDIS_PORT=6380
 
 SMTP_HOST=localhost
 SMTP_PORT=1025
 SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASSWORD=
-SMTP_FROM_NAME=Mail Engine
-SMTP_FROM_EMAIL=no-reply@example.com
+SMTP_FROM_NAME=Email Marketing Dev
+SMTP_FROM_EMAIL=no-reply@email-marketing.local
 
 SMTP_SENDER_ENCRYPTION_KEY=change-this-secret-key-with-at-least-32-chars
 ```
 
-## Configuração geral do sistema
+### Rodar a aplicação
 
-Além do `.env`, o projeto possui um arquivo JSON com configurações default unificadas:
+```bash
+npm run dev
+```
 
-- `config/system.config.json`
+Esse comando executa a Control API e o Dispatch Worker localmente.
 
-Esse arquivo centraliza, neste momento:
+## Modo 2: stack completa dockerizada
 
-- paginação default da API
-- nomes de fila BullMQ
-- nomes dos jobs da fila de dispatch
-- texto fallback para envio de e-mail
+Use este modo quando quiser validar a aplicação inteira dentro do Docker.
 
-A ideia é reduzir valores hard-coded espalhados e facilitar uma futura migração dessas configurações para persistência em banco.
+Nesse cenário, o Docker sobe:
 
-## Subindo a infraestrutura local
+- PostgreSQL;
+- Redis;
+- Mailpit;
+- Control API;
+- Dispatch Worker.
+
+### Criar o `.env.docker`
+
+No Windows PowerShell:
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+```
+
+Valores típicos para esse modo:
+
+```env
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=email_marketing
+POSTGRES_USER=email_marketing
+POSTGRES_PASSWORD=email_marketing
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM_NAME=Email Marketing Dev
+SMTP_FROM_EMAIL=no-reply@email-marketing.local
+
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+SMTP_SENDER_ENCRYPTION_KEY=change-this-docker-key-with-at-least-32-chars
+```
+
+### Subir a stack completa
 
 Na raiz do projeto:
 
 ```bash
-docker compose -f infra/compose.yaml up -d
+docker compose -f infra/compose.infra-dockerized.yaml up --build
 ```
 
-Para verificar os containers:
+Para subir em segundo plano:
 
 ```bash
-docker compose -f infra/compose.yaml ps
+docker compose -f infra/compose.infra-dockerized.yaml up -d --build
 ```
 
-Para parar os serviços:
+## Portas padrão
 
-```bash
-docker compose -f infra/compose.yaml down
+Quando os serviços são publicados no host, os acessos locais esperados são:
+
+| Serviço         | Acesso no host                        | Acesso dentro do Docker          |
+| --------------- | ------------------------------------- | -------------------------------- |
+| Control API     | `http://localhost:3333`               | `control-api:3333`               |
+| Swagger/OpenAPI | `http://localhost:3333/documentation` | `control-api:3333/documentation` |
+| PostgreSQL      | `localhost:5433`                      | `postgres:5432`                  |
+| Redis           | `localhost:6380`                      | `redis:6379`                     |
+| Mailpit SMTP    | `localhost:1025`                      | `mailpit:1025`                   |
+| Mailpit Web UI  | `http://localhost:8025`               | `mailpit:8025`                   |
+
+## Observação sobre portas
+
+As portas publicadas no host podem ser ajustadas caso exista conflito com outros serviços da máquina.
+
+Exemplo:
+
+```yaml
+ports:
+  - "5434:5432"
 ```
+
+Nesse caso, apenas o acesso externo muda para `localhost:5434`. Dentro do Docker, a aplicação continua usando `postgres:5432`.
 
 ## Mailpit
 
-### SMTP Senders locais
+O Mailpit é o servidor SMTP local de desenvolvimento usado para capturar os e-mails enviados pela aplicação.
 
-O MailPit agora deve ser cadastrado como um SMTP Sender para uso nas campaigns de desenvolvimento.
+Interface web:
 
-Se API e worker estiverem rodando fora do Docker, use `localhost` como host:
+```text
+http://localhost:8025
+```
+
+### SMTP Sender local
+
+Para campaigns de desenvolvimento, cadastre um SMTP Sender apontando para o Mailpit.
+
+Se API e worker estiverem rodando fora do Docker:
 
 ```json
 {
-  "name": "MailPit Local",
+  "name": "Mailpit Local",
   "fromName": "Email Marketing Dev",
   "fromEmail": "dev@email-marketing.local",
   "replyToEmail": null,
@@ -135,59 +204,57 @@ Se API e worker estiverem rodando fora do Docker, use `localhost` como host:
 }
 ```
 
-Se o worker estiver rodando dentro do Docker Compose, use o nome do serviço como host:
+Se API e worker estiverem rodando dentro do Docker:
 
 ```json
 {
+  "name": "Mailpit Docker",
+  "fromName": "Email Marketing Dev",
+  "fromEmail": "dev@email-marketing.local",
+  "replyToEmail": null,
   "host": "mailpit",
   "port": 1025,
-  "secure": false
+  "secure": false,
+  "username": null,
+  "password": null,
+  "isActive": true
 }
 ```
 
-O Mailpit é o servidor SMTP local de desenvolvimento usado para capturar os e-mails enviados pela aplicação.
+## Configuração geral do sistema
 
-### Portas do Mailpit
-
-- SMTP: `1025`
-- Interface web: `8025`
-
-### Como usar
-
-Depois de subir os containers, acesse:
+Além do `.env` ou `.env.docker`, o projeto possui um arquivo JSON com configurações default unificadas:
 
 ```text
-http://localhost:8025
+config/system.config.json
 ```
 
-A interface web do Mailpit permitirá visualizar os e-mails recebidos localmente sem enviar mensagens reais para a internet.
+Esse arquivo deve estar presente também na imagem final Docker, pois a API e o worker dependem dele em runtime.
 
-## Fluxo típico de desenvolvimento
+## Integração com CNPJ API
 
-Um fluxo local comum é:
+Para usar o lead source `cnpj-api`, configure:
 
-1. subir os containers com Docker Compose
-2. copiar `.env.example` para `.env`
-3. rodar migrations
-4. subir a API e o worker
-5. testar os fluxos via Postman e Mailpit
+- `CNPJ_API_BASE_URL`;
+- `CNPJ_API_TOKEN` opcional;
+- `CNPJ_API_TIMEOUT_MS`.
+
+Se a Control API estiver rodando dentro do Docker e a CNPJ API estiver rodando na máquina host, use:
+
+```env
+CNPJ_API_BASE_URL=http://host.docker.internal:3000
+```
+
+Se tudo estiver rodando fora do Docker, use:
+
+```env
+CNPJ_API_BASE_URL=http://localhost:3000
+```
 
 ## Scripts úteis
 
 Consulte também:
 
 - [Scripts do projeto](../conventions/scripts.md)
-
-## Observação final
-
-Esta documentação deve evoluir junto com a arquitetura e o fluxo real do projeto.
-
-## Integração com CNPJ API
-
-Para usar o lead source `cnpj-api`, configure no `.env`:
-
-- `CNPJ_API_BASE_URL`
-- `CNPJ_API_TOKEN` (opcional)
-- `CNPJ_API_TIMEOUT_MS`
-
-Em ambiente local, a base costuma apontar para `http://localhost:3000`.
+- [Docker e infraestrutura local](./docker.md)
+- [Migrations](../database/migrations.md)

@@ -4,7 +4,7 @@ Este documento descreve a intenção de cada área do monorepo.
 
 ## Visão geral
 
-O projeto foi organizado como monorepo para permitir evolução coordenada entre API, worker, packages internos e documentação.
+O projeto foi organizado como monorepo para permitir evolução coordenada entre API, worker, packages internos, documentação e infraestrutura local.
 
 ## Diretórios principais
 
@@ -32,11 +32,57 @@ Documentação técnica, operacional e arquitetural do projeto.
 
 ### `infra/`
 
-Arquivos de infraestrutura local, como Docker Compose e migrations SQL.
+Arquivos de orquestração local, principalmente Docker Compose.
+
+Estrutura esperada:
+
+```text
+infra/
+├─ compose.infra.local.yaml
+└─ compose.infra-dockerized.yaml
+```
+
+- `compose.infra.local.yaml`: sobe apenas PostgreSQL, Redis e Mailpit para desenvolvimento com a aplicação rodando fora do Docker.
+- `compose.infra-dockerized.yaml`: sobe PostgreSQL, Redis, Mailpit, Control API e Dispatch Worker para validar a stack completa dockerizada.
+
+### `docker/`
+
+Scripts e arquivos auxiliares usados por containers locais.
+
+Exemplo:
+
+```text
+docker/
+└─ postgres/
+   └─ migrations/
+      ├─ 001_initial_schema.sql
+      └─ ...
+```
+
+Os scripts SQL podem ser montados no container do Postgres em `/docker-entrypoint-initdb.d` para inicialização do banco local.
 
 ### `config/`
 
 Configuração default de comportamento do sistema, fora do `.env`.
+
+O arquivo principal é:
+
+```text
+config/system.config.json
+```
+
+Esse arquivo precisa estar disponível em runtime, inclusive nas imagens Docker finais.
+
+### Dockerfiles na raiz
+
+Os Dockerfiles das aplicações ficam na raiz:
+
+```text
+Dockerfile.control-api
+Dockerfile.dispatch-worker
+```
+
+Eles ficam na raiz porque o contexto de build precisa acessar o monorepo inteiro, incluindo apps, packages, configs e manifests npm.
 
 ## Regra prática de responsabilidade
 
@@ -45,7 +91,9 @@ Configuração default de comportamento do sistema, fora do `.env`.
 - entrada HTTP e integração com cliente: `apps/control-api`
 - processamento assíncrono: `apps/dispatch-worker`
 - documentação e convenções: `docs`
-- infraestrutura local e suporte operacional: `infra`
+- orquestração local: `infra`
+- scripts auxiliares de containers: `docker`
+- configuração base do sistema: `config`
 
 ## Estrutura esperada da Control API
 

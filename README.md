@@ -10,7 +10,37 @@ Este projeto serve como base para um sistema de gerenciamento de campanhas, temp
 - `apps/dispatch-worker`: worker responsável pelo processamento assíncrono
 - `packages/core`: núcleo de domínio em amadurecimento
 - `packages/shared`: infraestrutura e utilitários compartilhados
+- `config`: configuração base do sistema
+- `infra`: arquivos Docker Compose para execução local
+- `docker`: scripts auxiliares de banco usados na inicialização local
 - `docs`: documentação do projeto
+
+## Execução local
+
+O projeto possui dois modos principais de execução local.
+
+### 1. Aplicação local com infraestrutura no Docker
+
+Use este modo durante o desenvolvimento diário, quando quiser rodar a API e o worker diretamente na máquina com Node.js, mantendo apenas PostgreSQL, Redis e Mailpit em containers.
+
+```bash
+docker compose -f infra/compose.infra.local.yml up -d
+npm run dev
+```
+
+Nesse modo, a aplicação usa o arquivo `.env` e acessa os serviços por `localhost`.
+
+### 2. Stack completa dockerizada
+
+Use este modo para validar o projeto rodando inteiramente em containers.
+
+```bash
+docker compose -f infra/compose.infra-dockerized.yml up --build
+```
+
+Nesse modo, a Control API e o Dispatch Worker usam o arquivo `.env.docker` e acessam os serviços pelo nome interno do Docker Compose.
+
+A documentação completa de Docker e infraestrutura está em [Docker e infraestrutura local](./docs/setup/docker.md).
 
 ## SMTP Senders dinâmicos
 
@@ -44,6 +74,7 @@ A documentação do projeto está em [`docs/README.md`](./docs/README.md).
 Leituras recomendadas:
 
 - [Desenvolvimento local](./docs/setup/local-development.md)
+- [Docker e infraestrutura local](./docs/setup/docker.md)
 - [Estrutura do projeto](./docs/conventions/project-structure.md)
 - [Scripts do projeto](./docs/conventions/scripts.md)
 - [Estado atual da arquitetura](./docs/architecture/current-state.md)
