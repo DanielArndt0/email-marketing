@@ -1,7 +1,6 @@
 {
   "name": "dispatch-worker",
   "version": "1.0.0",
-  "private": true,
   "description": "Worker responsável pelo processamento assíncrono e consumo de filas do sistema de e-mail marketing.",
   "scripts": {
     "test": "echo \"No tests configured yet\"",

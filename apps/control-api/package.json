@@ -1,7 +1,6 @@
 {
   "name": "control-api",
   "version": "1.0.0",
-  "private": true,
   "description": "API HTTP de controle do sistema de e-mail marketing.",
   "scripts": {
     "test": "echo \"No tests configured yet\"",

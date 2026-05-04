@@ -1,7 +1,6 @@
 {
   "name": "core",
   "version": "1.0.0",
-  "private": true,
   "description": "Pacote interno com domínio, contratos e casos de uso centrais do sistema de e-mail marketing.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

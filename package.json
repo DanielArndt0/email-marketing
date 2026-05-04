@@ -2,7 +2,6 @@
   "name": "email-marketing",
   "version": "1.0.0",
   "description": "Aplicação de e-mail marketing para gerenciamento de campanhas, contatos, listas e processamento de envios.",
-  "private": true,
   "scripts": {
     "test": "echo \"No tests configured yet\"",
     "dev": "concurrently -n api,worker \"npm run dev:api\" \"npm run dev:worker\"",
@@ -16,7 +15,8 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "clean": "rimraf apps/*/dist packages/*/dist",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "check": "npm run typecheck && npm run lint && npm run build"
   },
   "repository": {
     "type": "git",

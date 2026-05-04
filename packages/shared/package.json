@@ -1,7 +1,6 @@
 {
   "name": "shared",
   "version": "1.0.0",
-  "private": true,
   "description": "Pacote interno com infraestrutura e utilitários compartilhados entre os apps do sistema de e-mail marketing.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
