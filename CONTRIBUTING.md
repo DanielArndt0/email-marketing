@@ -92,25 +92,15 @@ No entanto, a partir da primeira release, a recomendação é passar a utilizar 
 Formato recomendado:
 
 ```text
-<tipo>(<escopo>): <descrição>
+(<escopo>): <descrição>
 ```
 
 Exemplos:
 
-- `feat(control-api): adicionada listagem de dispatches com filtros básicos`
-- `fix(infra): ajustada porta do PostgreSQL dockerizado para coexistência com instância local`
-- `refactor(shared): centralizada leitura da configuração do sistema`
-- `docs(control-api): detalhados endpoints da API`
-
-### Tipos mais usados
-
-- `feat`
-- `fix`
-- `refactor`
-- `docs`
-- `chore`
-- `test`
-- `infra`
+- `(control-api): adicionada listagem de dispatches com filtros básicos`
+- `(infra): ajustada porta do PostgreSQL dockerizado para coexistência com instância local`
+- `(shared): centralizada leitura da configuração do sistema`
+- `(control-api): detalhados endpoints da API`
 
 ## Pull requests
 
