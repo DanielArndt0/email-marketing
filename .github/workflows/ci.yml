@@ -26,5 +26,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run checks
+      - name: Typecheck shared package
+        run: npm run typecheck -w packages/shared
+
+      - name: Typecheck core package
+        run: npm run typecheck -w packages/core
+
+      - name: Build shared package
+        run: npm run build -w packages/shared
+
+      - name: Build core package
+        run: npm run build -w packages/core
+
+      - name: Run full project check
         run: npm run check
