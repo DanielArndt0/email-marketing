@@ -22,6 +22,20 @@ export const campaignStatus = {
   failed: "failed",
 } as const satisfies Record<CampaignStatus, CampaignStatus>;
 
+const campaignStatusSet = new Set<string>(CAMPAIGN_STATUSES);
+
+export function isCampaignStatus(value: unknown): value is CampaignStatus {
+  return typeof value === "string" && campaignStatusSet.has(value);
+}
+
+export function parseCampaignStatus(value: unknown): CampaignStatus {
+  if (isCampaignStatus(value)) {
+    return value;
+  }
+
+  throw new Error(`Invalid campaign status: ${String(value)}`);
+}
+
 export function canScheduleCampaign(status: CampaignStatus | string): boolean {
   return status === campaignStatus.ready || status === campaignStatus.scheduled;
 }

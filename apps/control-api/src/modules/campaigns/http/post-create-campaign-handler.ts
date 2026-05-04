@@ -29,6 +29,23 @@ export function createPostCreateCampaignHandler(
       scheduleAt: body.scheduleAt,
     });
 
+    if (result.kind === "invalid_initial_status") {
+      return reply.status(409).send({
+        message:
+          "Status inicial inválido para criação de campaign. Use draft, ready ou scheduled.",
+        status: result.status,
+        allowedStatuses: result.allowedStatuses,
+      });
+    }
+
+    if (result.kind === "invalid_status_configuration") {
+      return reply.status(409).send({
+        message: `A campaign não pode ser criada como ${result.status} com a configuração atual.`,
+        status: result.status,
+        reason: result.reason,
+      });
+    }
+
     if (result.kind === "template_not_found") {
       return reply.status(404).send({
         message: "Template não encontrado.",

@@ -1,5 +1,6 @@
 import {
   createAudienceDefinition,
+  parseCampaignStatus,
   parseLeadSourceType,
   type AudienceDefinition,
   type CampaignStatus,
@@ -57,23 +58,8 @@ export type CampaignListResult = {
   totalPages: number;
 };
 
-const VALID_CAMPAIGN_STATUSES: CampaignStatus[] = [
-  "draft",
-  "ready",
-  "scheduled",
-  "running",
-  "paused",
-  "completed",
-  "canceled",
-  "failed",
-];
-
 function toCampaignStatus(value: string): CampaignStatus {
-  if (VALID_CAMPAIGN_STATUSES.includes(value as CampaignStatus)) {
-    return value as CampaignStatus;
-  }
-
-  throw new Error(`Invalid campaign status returned from database: ${value}`);
+  return parseCampaignStatus(value);
 }
 
 function toAudienceRecord(row: RawCampaignRow): CampaignRecord["audience"] {

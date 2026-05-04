@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import type { CampaignStatus } from "core";
+import type { CampaignDispatchStatusSummary, CampaignStatus } from "core";
 
 type CampaignStatusRow = {
   status: string;
@@ -34,34 +34,34 @@ export async function findCampaignStatusById(
   return status ? (status as CampaignStatus) : null;
 }
 
-export async function updateCampaignStatusById(
+export async function transitionCampaignStatusById(
   pgPool: Pool,
-  campaignId: string,
-  status: CampaignStatus,
-): Promise<void> {
-  await pgPool.query(
+  input: {
+    campaignId: string;
+    from: CampaignStatus;
+    to: CampaignStatus;
+  },
+): Promise<boolean> {
+  const result = await pgPool.query<{ id: string }>(
     `
       UPDATE campaigns
       SET
-        status = $2,
+        status = $3,
         updated_at = NOW()
       WHERE id = $1
+        AND status = $2
+      RETURNING id
     `,
-    [campaignId, status],
+    [input.campaignId, input.from, input.to],
   );
+
+  return result.rowCount === 1;
 }
 
 export async function getCampaignDispatchStatusSummary(
   pgPool: Pool,
   campaignId: string,
-): Promise<{
-  total: number;
-  pending: number;
-  queued: number;
-  processing: number;
-  sent: number;
-  error: number;
-}> {
+): Promise<CampaignDispatchStatusSummary> {
   const result = await pgPool.query<DispatchStatusSummaryRow>(
     `
       SELECT

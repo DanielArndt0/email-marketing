@@ -4,6 +4,8 @@ import { sendEmail, systemConfig } from "shared";
 
 import { buildSmtpSenderMailConfig } from "../../smtp-senders/application/build-smtp-sender-mail-config.js";
 import { findSmtpSenderById } from "../../smtp-senders/repositories/smtp-sender-repository.js";
+import { syncCampaignStatusFromDispatches } from "./sync-campaign-status-from-dispatches.js";
+
 import {
   findEmailDispatchById,
   markEmailDispatchFailed,
@@ -96,5 +98,10 @@ export async function processEmailDispatch(
     });
 
     throw error;
+  } finally {
+    await syncCampaignStatusFromDispatches(
+      dependencies,
+      dispatch.campaignId,
+    ).catch(() => undefined);
   }
 }

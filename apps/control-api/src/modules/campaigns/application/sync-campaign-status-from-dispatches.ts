@@ -1,11 +1,14 @@
 import type { Pool } from "pg";
 
-import type { CampaignStatus } from "core";
+import {
+  deriveCampaignStatusFromDispatchSummary,
+  type CampaignStatus,
+} from "core";
 
 import {
   findCampaignStatusById,
   getCampaignDispatchStatusSummary,
-  updateCampaignStatusById,
+  transitionCampaignStatusById,
 } from "../repositories/campaign-repository.js";
 
 type SyncCampaignStatusDependencies = {
@@ -13,17 +16,14 @@ type SyncCampaignStatusDependencies = {
 };
 
 export type SyncCampaignStatusResult =
+  | { kind: "not_found" }
+  | { kind: "not_changed"; status: CampaignStatus }
   | {
-      kind: "not_found";
+      kind: "status_conflict";
+      expectedStatus: CampaignStatus;
+      requestedStatus: CampaignStatus;
     }
-  | {
-      kind: "not_changed";
-      status: CampaignStatus;
-    }
-  | {
-      kind: "updated";
-      status: CampaignStatus;
-    };
+  | { kind: "updated"; status: CampaignStatus };
 
 export async function syncCampaignStatusFromDispatches(
   dependencies: SyncCampaignStatusDependencies,
@@ -35,16 +35,7 @@ export async function syncCampaignStatusFromDispatches(
   );
 
   if (!currentStatus) {
-    return {
-      kind: "not_found",
-    };
-  }
-
-  if (currentStatus !== "running") {
-    return {
-      kind: "not_changed",
-      status: currentStatus,
-    };
+    return { kind: "not_found" };
   }
 
   const summary = await getCampaignDispatchStatusSummary(
@@ -52,28 +43,28 @@ export async function syncCampaignStatusFromDispatches(
     campaignId,
   );
 
-  if (summary.total === 0) {
+  const nextStatus = deriveCampaignStatusFromDispatchSummary({
+    currentStatus,
+    summary,
+  });
+
+  if (!nextStatus) {
+    return { kind: "not_changed", status: currentStatus };
+  }
+
+  const transitioned = await transitionCampaignStatusById(dependencies.pgPool, {
+    campaignId,
+    from: currentStatus,
+    to: nextStatus,
+  });
+
+  if (!transitioned) {
     return {
-      kind: "not_changed",
-      status: currentStatus,
+      kind: "status_conflict",
+      expectedStatus: currentStatus,
+      requestedStatus: nextStatus,
     };
   }
 
-  const activeCount = summary.pending + summary.queued + summary.processing;
-
-  if (activeCount > 0) {
-    return {
-      kind: "not_changed",
-      status: currentStatus,
-    };
-  }
-
-  const nextStatus: CampaignStatus = summary.sent > 0 ? "completed" : "failed";
-
-  await updateCampaignStatusById(dependencies.pgPool, campaignId, nextStatus);
-
-  return {
-    kind: "updated",
-    status: nextStatus,
-  };
+  return { kind: "updated", status: nextStatus };
 }

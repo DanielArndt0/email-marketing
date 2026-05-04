@@ -26,6 +26,7 @@ O projeto está em evolução e, no momento, reúne:
 - [Control API](./apps/control-api.md)
 - [Endpoints da Control API](./apps/control-api/endpoints.md)
 - [SMTP Senders](./apps/control-api/smtp-senders.md)
+- [Gerenciamento de status das campaigns](./apps/control-api/campaign-status-management.md)
 - [Dispatch Worker](./apps/dispatch-worker.md)
 
 ### Packages

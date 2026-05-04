@@ -2,14 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
-import type { CampaignStatus, TemplateVariableMappings } from "core";
-
-import {
-  addUpdateAssignment,
-  addWhereCondition,
-  buildWhereClause,
-  readCount,
-} from "../../../shared/persistence/sql-builders.js";
+import type {
+  CampaignDispatchStatusSummary,
+  CampaignStatus,
+  TemplateVariableMappings,
+} from "core";
 
 type CountRow = { total: string };
 
@@ -24,15 +21,6 @@ type DispatchStatusSummaryRow = {
   processing: string;
   sent: string;
   error: string;
-};
-
-export type CampaignDispatchStatusSummary = {
-  total: number;
-  pending: number;
-  queued: number;
-  processing: number;
-  sent: number;
-  error: number;
 };
 
 export type RawCampaignRow = {
@@ -170,24 +158,17 @@ export async function listCampaignsPage(
   const conditions: string[] = [];
 
   if (input.status) {
-    addWhereCondition({
-      conditions,
-      values,
-      condition: (param) => `c.status = ${param}`,
-      value: input.status,
-    });
+    values.push(input.status);
+    conditions.push(`c.status = $${values.length}`);
   }
 
   if (input.audienceId) {
-    addWhereCondition({
-      conditions,
-      values,
-      condition: (param) => `c.audience_id = ${param}`,
-      value: input.audienceId,
-    });
+    values.push(input.audienceId);
+    conditions.push(`c.audience_id = $${values.length}`);
   }
 
-  const whereClause = buildWhereClause(conditions);
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const offset = (input.page - 1) * input.pageSize;
 
   const countResult = await pgPool.query<CountRow>(
@@ -214,7 +195,7 @@ export async function listCampaignsPage(
 
   return {
     items: listResult.rows,
-    total: readCount(countResult.rows[0]),
+    total: Number(countResult.rows[0]?.total ?? "0"),
   };
 }
 
@@ -247,105 +228,76 @@ export async function updateCampaignById(
     smtpSenderId?: string | null | undefined;
     templateVariableMappings?: TemplateVariableMappings | undefined;
     scheduleAt?: string | null | undefined;
+    expectedStatus?: CampaignStatus | undefined;
   },
 ): Promise<RawCampaignRow | null> {
-  const assignments: string[] = [];
+  const fields: string[] = [];
   const values: unknown[] = [];
 
   if (input.name !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "name",
-      value: input.name,
-    });
+    values.push(input.name);
+    fields.push(`name = $${values.length}`);
   }
 
   if (input.goal !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "goal",
-      value: input.goal,
-    });
+    values.push(input.goal);
+    fields.push(`goal = $${values.length}`);
   }
 
   if (input.subject !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "subject",
-      value: input.subject,
-    });
+    values.push(input.subject);
+    fields.push(`subject = $${values.length}`);
   }
 
   if (input.status !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "status",
-      value: input.status,
-    });
+    values.push(input.status);
+    fields.push(`status = $${values.length}`);
   }
 
   if (input.templateId !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "template_id",
-      value: input.templateId,
-    });
+    values.push(input.templateId);
+    fields.push(`template_id = $${values.length}`);
   }
 
   if (input.audienceId !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "audience_id",
-      value: input.audienceId,
-    });
+    values.push(input.audienceId);
+    fields.push(`audience_id = $${values.length}`);
   }
 
   if (input.smtpSenderId !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "smtp_sender_id",
-      value: input.smtpSenderId,
-    });
+    values.push(input.smtpSenderId);
+    fields.push(`smtp_sender_id = $${values.length}`);
   }
 
   if (input.templateVariableMappings !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "template_variable_mappings",
-      value: JSON.stringify(input.templateVariableMappings),
-      cast: "::jsonb",
-    });
+    values.push(JSON.stringify(input.templateVariableMappings));
+    fields.push(`template_variable_mappings = $${values.length}::jsonb`);
   }
 
   if (input.scheduleAt !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "schedule_at",
-      value: input.scheduleAt,
-    });
+    values.push(input.scheduleAt);
+    fields.push(`schedule_at = $${values.length}`);
   }
 
-  if (assignments.length === 0) {
+  if (fields.length === 0) {
     return findCampaignById(pgPool, input.id);
   }
 
-  assignments.push("updated_at = NOW()");
+  fields.push("updated_at = NOW()");
   values.push(input.id);
+
+  const conditions = [`id = $${values.length}`];
+
+  if (input.expectedStatus !== undefined) {
+    values.push(input.expectedStatus);
+    conditions.push(`status = $${values.length}`);
+  }
 
   const result = await pgPool.query<{ id: string }>(
     `
       UPDATE campaigns
-      SET ${assignments.join(", ")}
-      WHERE id = $${values.length}
+      SET ${fields.join(", ")}
+      WHERE ${conditions.join(" AND ")}
       RETURNING id
     `,
     values,
@@ -395,7 +347,7 @@ export async function countEmailDispatchesByCampaignId(
     [campaignId],
   );
 
-  return readCount(result.rows[0]);
+  return Number(result.rows[0]?.total ?? "0");
 }
 
 export async function deleteCampaignById(
@@ -430,21 +382,35 @@ export async function findCampaignStatusById(
   return status ? (status as CampaignStatus) : null;
 }
 
-export async function updateCampaignStatusById(
+export async function transitionCampaignStatusById(
   pgPool: Pool,
-  campaignId: string,
-  status: CampaignStatus,
-): Promise<void> {
-  await pgPool.query(
+  input: {
+    campaignId: string;
+    from: CampaignStatus;
+    to: CampaignStatus;
+    touchLastExecutionAt?: boolean | undefined;
+  },
+): Promise<boolean> {
+  const result = await pgPool.query<{ id: string }>(
     `
       UPDATE campaigns
       SET
-        status = $2,
-        updated_at = NOW()
+        status = $3,
+        updated_at = NOW(),
+        last_execution_at = CASE WHEN $4 THEN NOW() ELSE last_execution_at END
       WHERE id = $1
+        AND status = $2
+      RETURNING id
     `,
-    [campaignId, status],
+    [
+      input.campaignId,
+      input.from,
+      input.to,
+      input.touchLastExecutionAt ?? false,
+    ],
   );
+
+  return result.rowCount === 1;
 }
 
 export async function getCampaignDispatchStatusSummary(
@@ -469,11 +435,11 @@ export async function getCampaignDispatchStatusSummary(
   const row = result.rows[0];
 
   return {
-    total: Number(row?.total ?? 0),
-    pending: Number(row?.pending ?? 0),
-    queued: Number(row?.queued ?? 0),
-    processing: Number(row?.processing ?? 0),
-    sent: Number(row?.sent ?? 0),
-    error: Number(row?.error ?? 0),
+    total: Number(row?.total ?? "0"),
+    pending: Number(row?.pending ?? "0"),
+    queued: Number(row?.queued ?? "0"),
+    processing: Number(row?.processing ?? "0"),
+    sent: Number(row?.sent ?? "0"),
+    error: Number(row?.error ?? "0"),
   };
 }

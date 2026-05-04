@@ -1,7 +1,11 @@
 import type { Pool } from "pg";
 
 import {
-  CAMPAIGN_STATUSES,
+  campaignStatus,
+  getAllowedCampaignInitialStatuses,
+  isCampaignInitialStatus,
+  validateCampaignConfigurationReadiness,
+  type CampaignConfigurationReadinessFailure,
   type CampaignStatus,
   type TemplateVariableMappings,
 } from "core";
@@ -29,6 +33,16 @@ export type CreateCampaignInput = {
 };
 
 export type CreateCampaignResult =
+  | {
+      kind: "invalid_initial_status";
+      status: CampaignStatus;
+      allowedStatuses: CampaignStatus[];
+    }
+  | {
+      kind: "invalid_status_configuration";
+      status: CampaignStatus;
+      reason: CampaignConfigurationReadinessFailure;
+    }
   | { kind: "template_not_found" }
   | { kind: "audience_not_found" }
   | { kind: "smtp_sender_not_found" }
@@ -38,36 +52,57 @@ export async function createCampaign(
   dependencies: CreateCampaignDependencies,
   input: CreateCampaignInput,
 ): Promise<CreateCampaignResult> {
-  if (input.templateId) {
-    const template = await findTemplateById(
-      dependencies.pgPool,
-      input.templateId,
-    );
+  const initialStatus = input.status ?? campaignStatus.draft;
 
-    if (!template) {
-      return { kind: "template_not_found" };
-    }
+  if (!isCampaignInitialStatus(initialStatus)) {
+    return {
+      kind: "invalid_initial_status",
+      status: initialStatus,
+      allowedStatuses: getAllowedCampaignInitialStatuses(),
+    };
   }
 
-  if (input.audienceId) {
-    const audience = await findAudienceById(
-      dependencies.pgPool,
-      input.audienceId,
-    );
+  const template = input.templateId
+    ? await findTemplateById(dependencies.pgPool, input.templateId)
+    : null;
 
-    if (!audience) {
-      return { kind: "audience_not_found" };
-    }
+  if (input.templateId && !template) {
+    return { kind: "template_not_found" };
   }
 
-  if (input.smtpSenderId) {
-    const smtpSender = await findSmtpSenderById(
-      dependencies.pgPool,
-      input.smtpSenderId,
-    );
+  const audience = input.audienceId
+    ? await findAudienceById(dependencies.pgPool, input.audienceId)
+    : null;
 
-    if (!smtpSender) {
-      return { kind: "smtp_sender_not_found" };
+  if (input.audienceId && !audience) {
+    return { kind: "audience_not_found" };
+  }
+
+  const smtpSender = input.smtpSenderId
+    ? await findSmtpSenderById(dependencies.pgPool, input.smtpSenderId)
+    : null;
+
+  if (input.smtpSenderId && !smtpSender) {
+    return { kind: "smtp_sender_not_found" };
+  }
+
+  if (
+    initialStatus === campaignStatus.ready ||
+    initialStatus === campaignStatus.scheduled
+  ) {
+    const readiness = validateCampaignConfigurationReadiness({
+      hasTemplate: Boolean(template),
+      hasAudience: Boolean(audience),
+      hasSmtpSender: Boolean(smtpSender),
+      isSmtpSenderActive: Boolean(smtpSender?.isActive),
+    });
+
+    if (!readiness.ready) {
+      return {
+        kind: "invalid_status_configuration",
+        status: initialStatus,
+        reason: readiness.reason,
+      };
     }
   }
 
@@ -75,7 +110,7 @@ export async function createCampaign(
     name: input.name,
     goal: input.goal,
     subject: input.subject,
-    status: input.status ?? CAMPAIGN_STATUSES[0],
+    status: initialStatus,
     templateId: input.templateId,
     audienceId: input.audienceId,
     smtpSenderId: input.smtpSenderId,

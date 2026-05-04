@@ -45,6 +45,25 @@ export function createPostDispatchCampaignHandler(
       });
     }
 
+    if (result.kind === "invalid_status") {
+      return reply.status(409).send({
+        message:
+          "A campaign só pode ser disparada nos status ready, scheduled ou failed.",
+        status: result.status,
+        allowedStatuses: result.allowedStatuses,
+      });
+    }
+
+    if (result.kind === "status_conflict") {
+      return reply.status(409).send({
+        message:
+          "O status da campaign foi alterado por outro fluxo antes do disparo. Recarregue e tente novamente.",
+        campaignId: result.campaignId,
+        expectedStatus: result.expectedStatus,
+        requestedStatus: result.requestedStatus,
+      });
+    }
+
     if (result.kind === "missing_template") {
       return reply.status(409).send({
         message: "A campaign não possui template vinculado.",

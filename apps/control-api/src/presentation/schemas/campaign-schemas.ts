@@ -180,17 +180,10 @@ export const createCampaignBodySchema = {
     subject: { type: ["string", "null"] },
     status: {
       type: "string",
-      enum: [
-        "draft",
-        "ready",
-        "scheduled",
-        "running",
-        "paused",
-        "completed",
-        "canceled",
-        "failed",
-      ],
+      enum: ["draft", "ready", "scheduled"],
       default: "draft",
+      description:
+        "Status inicial permitido para criação. Estados operacionais como running, completed, failed e canceled são controlados pelo ciclo de vida da campaign.",
     },
     templateId: { type: ["string", "null"] },
     audienceId: { type: ["string", "null"], examples: ["audience-001"] },
@@ -264,6 +257,29 @@ export const notFoundMessageSchema = {
   properties: {
     message: { type: "string" },
   },
+} as const;
+
+export const statusConflictMessageSchema = {
+  type: "object",
+  required: ["message"],
+  properties: {
+    message: { type: "string" },
+    from: { type: "string" },
+    to: { type: "string" },
+    status: { type: "string" },
+    reason: { type: "string" },
+    allowedStatuses: {
+      type: "array",
+      items: { type: "string" },
+    },
+    allowedTransitions: {
+      type: "array",
+      items: { type: "string" },
+    },
+    expectedStatus: { type: "string" },
+    requestedStatus: { type: "string" },
+  },
+  additionalProperties: true,
 } as const;
 
 export const deleteCampaignRouteSchema = {

@@ -1,11 +1,11 @@
 import type { Pool } from "pg";
 
-import type { CampaignStatus } from "core";
+import { deriveCampaignStatusFromDispatchSummary } from "core";
 
 import {
   findCampaignStatusById,
   getCampaignDispatchStatusSummary,
-  updateCampaignStatusById,
+  transitionCampaignStatusById,
 } from "../repositories/campaign-status-repository.js";
 
 type SyncCampaignStatusDependencies = {
@@ -21,7 +21,7 @@ export async function syncCampaignStatusFromDispatches(
     campaignId,
   );
 
-  if (currentStatus !== "running") {
+  if (!currentStatus) {
     return;
   }
 
@@ -30,17 +30,18 @@ export async function syncCampaignStatusFromDispatches(
     campaignId,
   );
 
-  if (summary.total === 0) {
+  const nextStatus = deriveCampaignStatusFromDispatchSummary({
+    currentStatus,
+    summary,
+  });
+
+  if (!nextStatus) {
     return;
   }
 
-  const activeCount = summary.pending + summary.queued + summary.processing;
-
-  if (activeCount > 0) {
-    return;
-  }
-
-  const nextStatus: CampaignStatus = summary.sent > 0 ? "completed" : "failed";
-
-  await updateCampaignStatusById(dependencies.pgPool, campaignId, nextStatus);
+  await transitionCampaignStatusById(dependencies.pgPool, {
+    campaignId,
+    from: currentStatus,
+    to: nextStatus,
+  });
 }

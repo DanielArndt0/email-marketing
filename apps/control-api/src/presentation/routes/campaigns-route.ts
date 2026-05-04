@@ -21,6 +21,7 @@ import {
   createCampaignBodySchema,
   listCampaignsQuerySchema,
   notFoundMessageSchema,
+  statusConflictMessageSchema,
   updateCampaignBodySchema,
   dispatchCampaignBodySchema,
   dispatchCampaignResponseSchema,
@@ -47,6 +48,7 @@ const createCampaignRouteSchema = {
   response: {
     201: campaignSchema,
     404: notFoundMessageSchema,
+    409: statusConflictMessageSchema,
   },
 } satisfies FastifySchema;
 
@@ -72,11 +74,14 @@ const getCampaignByIdRouteSchema = {
 const patchCampaignRouteSchema = {
   tags: ["campaigns"],
   summary: "Atualiza parcialmente uma campaign",
+  description:
+    "Quando o campo status for informado, a transição é validada pelas regras de domínio da campaign.",
   params: campaignParamsSchema,
   body: updateCampaignBodySchema,
   response: {
     200: campaignSchema,
     404: notFoundMessageSchema,
+    409: statusConflictMessageSchema,
   },
 } satisfies FastifySchema;
 
@@ -143,7 +148,7 @@ const dispatchCampaignRouteSchema = {
   response: {
     202: dispatchCampaignResponseSchema,
     404: messageSchema,
-    409: messageSchema,
+    409: statusConflictMessageSchema,
     502: messageSchema,
   },
 } satisfies FastifySchema;

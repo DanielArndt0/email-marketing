@@ -1,6 +1,8 @@
 import type { Queue } from "bullmq";
 import type { Pool } from "pg";
 
+import type { CampaignStatus } from "core";
+import { campaignStatus, validateCampaignDispatchReadiness } from "core";
 import type { EmailDispatchJobData } from "shared";
 
 import type { LeadSourceProviderRegistry } from "../../audiences/adapters/lead-source-provider-registry.js";
@@ -9,7 +11,7 @@ import { enqueueEmailDispatch } from "./enqueue-email-dispatch.js";
 import { mapCampaignRow } from "./shared.js";
 import {
   findCampaignById,
-  updateCampaignStatusById,
+  transitionCampaignStatusById,
 } from "../repositories/campaign-repository.js";
 import { resolveTemplateVariablesFromLead } from "./resolve-template-variables.js";
 
@@ -25,26 +27,23 @@ export type DispatchCampaignInput = {
 };
 
 export type DispatchCampaignResult =
+  | { kind: "not_found"; campaignId: string }
   | {
-      kind: "not_found";
+      kind: "invalid_status";
       campaignId: string;
+      status: CampaignStatus;
+      allowedStatuses: CampaignStatus[];
     }
   | {
-      kind: "missing_template";
+      kind: "status_conflict";
       campaignId: string;
+      expectedStatus: CampaignStatus;
+      requestedStatus: CampaignStatus;
     }
-  | {
-      kind: "missing_audience";
-      campaignId: string;
-    }
-  | {
-      kind: "missing_smtp_sender";
-      campaignId: string;
-    }
-  | {
-      kind: "inactive_smtp_sender";
-      campaignId: string;
-    }
+  | { kind: "missing_template"; campaignId: string }
+  | { kind: "missing_audience"; campaignId: string }
+  | { kind: "missing_smtp_sender"; campaignId: string }
+  | { kind: "inactive_smtp_sender"; campaignId: string }
   | {
       kind: "accepted";
       campaignId: string;
@@ -73,6 +72,17 @@ function getContactId(input: {
   return input.externalId ?? `${input.campaignId}:${input.email.toLowerCase()}`;
 }
 
+async function markCampaignDispatchPreparationFailed(
+  dependencies: DispatchCampaignDependencies,
+  input: { campaignId: string },
+): Promise<void> {
+  await transitionCampaignStatusById(dependencies.pgPool, {
+    campaignId: input.campaignId,
+    from: campaignStatus.running,
+    to: campaignStatus.failed,
+  });
+}
+
 export async function dispatchCampaign(
   dependencies: DispatchCampaignDependencies,
   input: DispatchCampaignInput,
@@ -83,52 +93,56 @@ export async function dispatchCampaign(
   );
 
   if (!campaignRow) {
-    return {
-      kind: "not_found",
-      campaignId: input.campaignId,
-    };
+    return { kind: "not_found", campaignId: input.campaignId };
   }
 
   const campaign = mapCampaignRow(campaignRow);
+  const readiness = validateCampaignDispatchReadiness({
+    status: campaign.status,
+    hasTemplate: Boolean(campaign.templateId && campaign.template),
+    hasAudience: Boolean(campaign.audienceId && campaign.audience),
+    hasSmtpSender: Boolean(campaign.smtpSenderId && campaign.smtpSender),
+    isSmtpSenderActive: Boolean(campaign.smtpSender?.isActive),
+  });
 
-  if (!campaign.templateId || !campaign.template) {
-    return {
-      kind: "missing_template",
-      campaignId: campaign.id,
-    };
+  if (!readiness.ready) {
+    if (readiness.reason === "invalid_status") {
+      return {
+        kind: "invalid_status",
+        campaignId: campaign.id,
+        status: campaign.status,
+        allowedStatuses: readiness.allowedStatuses ?? [],
+      };
+    }
+
+    return { kind: readiness.reason, campaignId: campaign.id };
   }
 
-  if (!campaign.audienceId || !campaign.audience) {
-    return {
-      kind: "missing_audience",
+  const transitionedToRunning = await transitionCampaignStatusById(
+    dependencies.pgPool,
+    {
       campaignId: campaign.id,
+      from: campaign.status,
+      to: campaignStatus.running,
+      touchLastExecutionAt: true,
+    },
+  );
+
+  if (!transitionedToRunning) {
+    return {
+      kind: "status_conflict",
+      campaignId: campaign.id,
+      expectedStatus: campaign.status,
+      requestedStatus: campaignStatus.running,
     };
   }
-
-  if (!campaign.smtpSenderId || !campaign.smtpSender) {
-    return {
-      kind: "missing_smtp_sender",
-      campaignId: campaign.id,
-    };
-  }
-
-  if (!campaign.smtpSender.isActive) {
-    return {
-      kind: "inactive_smtp_sender",
-      campaignId: campaign.id,
-    };
-  }
-
-  await updateCampaignStatusById(dependencies.pgPool, campaign.id, "running");
 
   try {
     const resolvedAudience = await resolveAudience(
+      { providerRegistry: dependencies.providerRegistry },
       {
-        providerRegistry: dependencies.providerRegistry,
-      },
-      {
-        sourceType: campaign.audience.sourceType,
-        filters: campaign.audience.filters,
+        sourceType: campaign.audience!.sourceType,
+        filters: campaign.audience!.filters,
         limit: input.limit,
       },
     );
@@ -150,10 +164,7 @@ export async function dispatchCampaign(
       );
 
       const result = await enqueueEmailDispatch(
-        {
-          pgPool: dependencies.pgPool,
-          queue: dependencies.queue,
-        },
+        { pgPool: dependencies.pgPool, queue: dependencies.queue },
         {
           campaignId: campaign.id,
           campaignName: campaign.name,
@@ -163,8 +174,8 @@ export async function dispatchCampaign(
             externalId: lead.externalId,
           }),
           to: email,
-          smtpSenderId: campaign.smtpSenderId,
-          templateId: campaign.templateId,
+          smtpSenderId: campaign.smtpSenderId!,
+          templateId: campaign.templateId!,
           templateVariables,
         },
       );
@@ -178,11 +189,9 @@ export async function dispatchCampaign(
     }
 
     if (dispatchIds.length === 0) {
-      await updateCampaignStatusById(
-        dependencies.pgPool,
-        campaign.id,
-        "failed",
-      );
+      await markCampaignDispatchPreparationFailed(dependencies, {
+        campaignId: campaign.id,
+      });
     }
 
     return {
@@ -195,7 +204,9 @@ export async function dispatchCampaign(
       dispatchIds,
     };
   } catch (error) {
-    await updateCampaignStatusById(dependencies.pgPool, campaign.id, "failed");
+    await markCampaignDispatchPreparationFailed(dependencies, {
+      campaignId: campaign.id,
+    });
 
     throw error;
   }

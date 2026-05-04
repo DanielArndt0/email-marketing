@@ -4,13 +4,6 @@ import type { Pool } from "pg";
 
 import type { AudienceFilters } from "core";
 
-import {
-  addUpdateAssignment,
-  addWhereCondition,
-  buildWhereClause,
-  readCount,
-} from "../../../shared/persistence/sql-builders.js";
-
 export type RawAudienceRow = {
   id: string;
   name: string;
@@ -22,16 +15,7 @@ export type RawAudienceRow = {
 };
 
 type CountRow = { total: string };
-
-const AUDIENCE_COLUMNS = `
-  id,
-  name,
-  description,
-  source_type AS "sourceType",
-  filters,
-  created_at AS "createdAt",
-  updated_at AS "updatedAt"
-`;
+type UsageRow = { count: string };
 
 export async function insertAudience(
   pgPool: Pool,
@@ -54,7 +38,14 @@ export async function insertAudience(
         filters
       )
       VALUES ($1, $2, $3, $4, $5::jsonb)
-      RETURNING ${AUDIENCE_COLUMNS}
+      RETURNING
+        id,
+        name,
+        description,
+        source_type AS "sourceType",
+        filters,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
     `,
     [
       id,
@@ -80,15 +71,12 @@ export async function listAudiencesPage(
   const conditions: string[] = [];
 
   if (input.sourceType) {
-    addWhereCondition({
-      conditions,
-      values,
-      condition: (param) => `source_type = ${param}`,
-      value: input.sourceType,
-    });
+    values.push(input.sourceType);
+    conditions.push(`source_type = $${values.length}`);
   }
 
-  const whereClause = buildWhereClause(conditions);
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const offset = (input.page - 1) * input.pageSize;
 
   const countResult = await pgPool.query<CountRow>(
@@ -104,7 +92,14 @@ export async function listAudiencesPage(
 
   const result = await pgPool.query<RawAudienceRow>(
     `
-      SELECT ${AUDIENCE_COLUMNS}
+      SELECT
+        id,
+        name,
+        description,
+        source_type AS "sourceType",
+        filters,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
       FROM audiences
       ${whereClause}
       ORDER BY created_at DESC
@@ -116,7 +111,7 @@ export async function listAudiencesPage(
 
   return {
     items: result.rows,
-    total: readCount(countResult.rows[0]),
+    total: Number(countResult.rows[0]?.total ?? "0"),
   };
 }
 
@@ -126,7 +121,14 @@ export async function findAudienceById(
 ): Promise<RawAudienceRow | null> {
   const result = await pgPool.query<RawAudienceRow>(
     `
-      SELECT ${AUDIENCE_COLUMNS}
+      SELECT
+        id,
+        name,
+        description,
+        source_type AS "sourceType",
+        filters,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
       FROM audiences
       WHERE id = $1
       LIMIT 1
@@ -147,59 +149,49 @@ export async function updateAudienceById(
     filters?: AudienceFilters | undefined;
   },
 ): Promise<RawAudienceRow | null> {
-  const assignments: string[] = [];
+  const fields: string[] = [];
   const values: unknown[] = [];
 
   if (input.name !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "name",
-      value: input.name,
-    });
+    values.push(input.name);
+    fields.push(`name = $${values.length}`);
   }
 
   if (input.description !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "description",
-      value: input.description,
-    });
+    values.push(input.description);
+    fields.push(`description = $${values.length}`);
   }
 
   if (input.sourceType !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "source_type",
-      value: input.sourceType,
-    });
+    values.push(input.sourceType);
+    fields.push(`source_type = $${values.length}`);
   }
 
   if (input.filters !== undefined) {
-    addUpdateAssignment({
-      assignments,
-      values,
-      column: "filters",
-      value: JSON.stringify(input.filters),
-      cast: "::jsonb",
-    });
+    values.push(JSON.stringify(input.filters));
+    fields.push(`filters = $${values.length}::jsonb`);
   }
 
-  if (assignments.length === 0) {
+  if (fields.length === 0) {
     return findAudienceById(pgPool, input.id);
   }
 
-  assignments.push("updated_at = NOW()");
+  fields.push("updated_at = NOW()");
   values.push(input.id);
 
   const result = await pgPool.query<RawAudienceRow>(
     `
       UPDATE audiences
-      SET ${assignments.join(", ")}
+      SET ${fields.join(", ")}
       WHERE id = $${values.length}
-      RETURNING ${AUDIENCE_COLUMNS}
+      RETURNING
+        id,
+        name,
+        description,
+        source_type AS "sourceType",
+        filters,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
     `,
     values,
   );
@@ -211,16 +203,16 @@ export async function countAudienceCampaignLinks(
   pgPool: Pool,
   audienceId: string,
 ): Promise<number> {
-  const result = await pgPool.query<CountRow>(
+  const result = await pgPool.query<UsageRow>(
     `
-      SELECT COUNT(*)::text AS total
+      SELECT COUNT(*)::text AS count
       FROM campaigns
       WHERE audience_id = $1
     `,
     [audienceId],
   );
 
-  return readCount(result.rows[0]);
+  return Number(result.rows[0]?.count ?? "0");
 }
 
 export async function deleteAudienceById(

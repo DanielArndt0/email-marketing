@@ -19,7 +19,7 @@ export type RawEmailDispatchListItem = {
 
 type CountRow = { total: string };
 
-type RetryCandidateRow = { id: string; status: string };
+type RetryCandidateRow = { id: string; campaignId: string; status: string };
 
 export async function listEmailDispatchesPage(
   pgPool: Pool,
@@ -135,6 +135,7 @@ export async function findRetryCandidateById(
     `
       SELECT
         id,
+        campaign_id AS "campaignId",
         status
       FROM email_dispatches
       WHERE id = $1
