@@ -43,8 +43,8 @@ PostgreSQL Database directory appears to contain a database; Skipping initializa
 Para recriar o banco local do zero:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml down -v
-docker compose -f infra/compose.infra-dockerized.yaml up --build
+docker compose -f infra/compose.infra.dockerized.yaml down -v
+docker compose -f infra/compose.infra.dockerized.yaml up --build
 ```
 
 Use `down -v` com cuidado, pois ele apaga os dados do banco local.
@@ -60,14 +60,14 @@ Get-ChildItem .\docker\postgres\migrations\*.sql |
   Sort-Object Name |
   ForEach-Object {
     Write-Host "Rodando migration: $($_.Name)"
-    Get-Content -Raw $_.FullName | docker compose -f infra/compose.infra-dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
+    Get-Content -Raw $_.FullName | docker compose -f infra/compose.infra.dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
   }
 ```
 
 Para rodar uma migration específica:
 
 ```powershell
-Get-Content -Raw .\docker\postgres\migrations_initial_schema.sql | docker compose -f infra/compose.infra-dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
+Get-Content -Raw .\docker\postgres\migrations_initial_schema.sql | docker compose -f infra/compose.infra.dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
 ```
 
 Também é possível executar scripts pelo pgAdmin, desde que o usuário, banco e porta estejam alinhados com o Compose.

@@ -35,7 +35,7 @@ Nesse modo, a aplicação usa o arquivo `.env` e acessa os serviços por `localh
 Use este modo para validar o projeto rodando inteiramente em containers.
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yml up --build
+docker compose -f infra/compose.infra.dockerized.yml up --build
 ```
 
 Nesse modo, a Control API e o Dispatch Worker usam o arquivo `.env.docker` e acessam os serviços pelo nome interno do Docker Compose.

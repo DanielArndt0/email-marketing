@@ -9,7 +9,7 @@ O projeto possui dois arquivos Compose principais dentro da pasta `infra/`:
 ```text
 infra/
 ├─ compose.infra.local.yaml
-└─ compose.infra-dockerized.yaml
+└─ compose.infra.dockerized.yaml
 ```
 
 Eles atendem a dois fluxos diferentes de desenvolvimento.
@@ -19,7 +19,7 @@ Eles atendem a dois fluxos diferentes de desenvolvimento.
 | Arquivo                               | Sobe quais serviços                                       | Quando usar                                                     |
 | ------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------- |
 | `infra/compose.infra.local.yaml`      | PostgreSQL, Redis e Mailpit                               | Desenvolvimento com API e worker rodando localmente via Node.js |
-| `infra/compose.infra-dockerized.yaml` | PostgreSQL, Redis, Mailpit, Control API e Dispatch Worker | Teste da stack completa dentro do Docker                        |
+| `infra/compose.infra.dockerized.yaml` | PostgreSQL, Redis, Mailpit, Control API e Dispatch Worker | Teste da stack completa dentro do Docker                        |
 
 ## Dockerfiles
 
@@ -107,41 +107,41 @@ Dispatch Worker
 ### Subir com build
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up --build
+docker compose -f infra/compose.infra.dockerized.yaml up --build
 ```
 
 ### Subir em segundo plano
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up -d --build
+docker compose -f infra/compose.infra.dockerized.yaml up -d --build
 ```
 
 ### Ver logs
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml logs -f
+docker compose -f infra/compose.infra.dockerized.yaml logs -f
 ```
 
 Para ver logs de um serviço específico:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml logs -f control-api
+docker compose -f infra/compose.infra.dockerized.yaml logs -f control-api
 ```
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml logs -f dispatch-worker
+docker compose -f infra/compose.infra.dockerized.yaml logs -f dispatch-worker
 ```
 
 ### Parar
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml down
+docker compose -f infra/compose.infra.dockerized.yaml down
 ```
 
 ### Parar e apagar volumes
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml down -v
+docker compose -f infra/compose.infra.dockerized.yaml down -v
 ```
 
 ## Diferença entre `.env` e `.env.docker`
@@ -283,8 +283,8 @@ Nesse caso, os scripts não são reaplicados automaticamente.
 Para recriar o banco local do zero:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml down -v
-docker compose -f infra/compose.infra-dockerized.yaml up --build
+docker compose -f infra/compose.infra.dockerized.yaml down -v
+docker compose -f infra/compose.infra.dockerized.yaml up --build
 ```
 
 ## Rodar migrations manualmente
@@ -298,14 +298,14 @@ Get-ChildItem .\docker\postgres\migrations\*.sql |
   Sort-Object Name |
   ForEach-Object {
     Write-Host "Rodando migration: $($_.Name)"
-    Get-Content -Raw $_.FullName | docker compose -f infra/compose.infra-dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
+    Get-Content -Raw $_.FullName | docker compose -f infra/compose.infra.dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
   }
 ```
 
 Para rodar uma migration específica:
 
 ```powershell
-Get-Content -Raw .\docker\postgres\migrations_initial_schema.sql | docker compose -f infra/compose.infra-dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
+Get-Content -Raw .\docker\postgres\migrations_initial_schema.sql | docker compose -f infra/compose.infra.dockerized.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U email_marketing -d email_marketing
 ```
 
 ## `build`, `up` e `up --build`
@@ -315,7 +315,7 @@ Get-Content -Raw .\docker\postgres\migrations_initial_schema.sql | docker compo
 Constrói as imagens, mas não inicia os containers.
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml build
+docker compose -f infra/compose.infra.dockerized.yaml build
 ```
 
 ### `docker compose up`
@@ -323,7 +323,7 @@ docker compose -f infra/compose.infra-dockerized.yaml build
 Cria e inicia os containers.
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up
+docker compose -f infra/compose.infra.dockerized.yaml up
 ```
 
 ### `docker compose up --build`
@@ -331,7 +331,7 @@ docker compose -f infra/compose.infra-dockerized.yaml up
 Reconstrói as imagens e inicia os containers.
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up --build
+docker compose -f infra/compose.infra.dockerized.yaml up --build
 ```
 
 Use quando alterar:
@@ -350,7 +350,7 @@ Se você mudou apenas variáveis de ambiente, normalmente não precisa reconstru
 Use:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up -d --force-recreate
+docker compose -f infra/compose.infra.dockerized.yaml up -d --force-recreate
 ```
 
 ## Acessos locais

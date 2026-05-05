@@ -4,7 +4,7 @@ Este documento concentra pontos de evolução planejados ou desejáveis para o p
 
 ## Infraestrutura e Docker
 
-- Validar os arquivos `infra/compose.infra.local.yaml` e `infra/compose.infra-dockerized.yaml` em ambiente limpo.
+- Validar os arquivos `infra/compose.infra.local.yaml` e `infra/compose.infra.dockerized.yaml` em ambiente limpo.
 - Consolidar publicação futura das imagens Docker em registry, como GHCR.
 - Criar um Compose de produção separado, preferencialmente fora do repositório público ou sem segredos.
 

@@ -39,11 +39,11 @@ Estrutura esperada:
 ```text
 infra/
 ├─ compose.infra.local.yaml
-└─ compose.infra-dockerized.yaml
+└─ compose.infra.dockerized.yaml
 ```
 
 - `compose.infra.local.yaml`: sobe apenas PostgreSQL, Redis e Mailpit para desenvolvimento com a aplicação rodando fora do Docker.
-- `compose.infra-dockerized.yaml`: sobe PostgreSQL, Redis, Mailpit, Control API e Dispatch Worker para validar a stack completa dockerizada.
+- `compose.infra.dockerized.yaml`: sobe PostgreSQL, Redis, Mailpit, Control API e Dispatch Worker para validar a stack completa dockerizada.
 
 ### `docker/`
 

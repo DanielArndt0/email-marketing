@@ -22,7 +22,7 @@ Para executar o projeto localmente, é esperado ter instalado:
 ```text
 infra/
 ├─ compose.infra.local.yaml
-└─ compose.infra-dockerized.yaml
+└─ compose.infra.dockerized.yaml
 
 Dockerfile.control-api
 Dockerfile.dispatch-worker
@@ -138,13 +138,13 @@ SMTP_SENDER_ENCRYPTION_KEY=change-this-docker-key-with-at-least-32-chars
 Na raiz do projeto:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up --build
+docker compose -f infra/compose.infra.dockerized.yaml up --build
 ```
 
 Para subir em segundo plano:
 
 ```bash
-docker compose -f infra/compose.infra-dockerized.yaml up -d --build
+docker compose -f infra/compose.infra.dockerized.yaml up -d --build
 ```
 
 ## Portas padrão
