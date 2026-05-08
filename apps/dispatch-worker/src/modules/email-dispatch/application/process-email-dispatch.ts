@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 
-import { sendEmail, systemConfig } from "shared";
+import { validateTemplateCidReferences } from "core";
+import { sendEmail, systemConfig, type SendEmailAttachmentInput } from "shared";
 
 import { buildSmtpSenderMailConfig } from "../../smtp-senders/application/build-smtp-sender-mail-config.js";
 import { findSmtpSenderById } from "../../smtp-senders/repositories/smtp-sender-repository.js";
@@ -8,9 +9,12 @@ import { syncCampaignStatusFromDispatches } from "./sync-campaign-status-from-di
 
 import {
   findEmailDispatchById,
+  listTemplateAttachmentsForDispatch,
+  listTemplateInlineAssetsForDispatch,
   markEmailDispatchFailed,
   markEmailDispatchProcessing,
   markEmailDispatchSent,
+  type RawDispatchEmailFileRow,
 } from "../repositories/email-dispatch-worker-repository.js";
 
 type ProcessEmailDispatchDependencies = {
@@ -26,6 +30,48 @@ export type ProcessEmailDispatchResult = {
   contactId: string;
   messageId: string;
 };
+
+function mapInlineAssetToAttachment(
+  file: RawDispatchEmailFileRow,
+): SendEmailAttachmentInput {
+  return {
+    filename: file.originalName,
+    path: file.storageKey,
+    contentType: file.mimeType,
+    cid: file.cid ?? undefined,
+    contentDisposition: "inline",
+  };
+}
+
+function mapRegularFileToAttachment(
+  file: RawDispatchEmailFileRow,
+): SendEmailAttachmentInput {
+  return {
+    filename: file.originalName,
+    path: file.storageKey,
+    contentType: file.mimeType,
+    contentDisposition: "attachment",
+  };
+}
+
+function assertTemplateCidReferences(input: {
+  htmlContent: string | null;
+  availableCids: string[];
+  dispatchId: string;
+}): void {
+  const validation = validateTemplateCidReferences({
+    htmlContent: input.htmlContent,
+    availableCids: input.availableCids,
+  });
+
+  if (validation.isValid) {
+    return;
+  }
+
+  throw new Error(
+    `Email dispatch ${input.dispatchId} possui referências cid sem asset vinculado: ${validation.missingCids.join(", ")}.`,
+  );
+}
 
 export async function processEmailDispatch(
   dependencies: ProcessEmailDispatchDependencies,
@@ -66,6 +112,28 @@ export async function processEmailDispatch(
       );
     }
 
+    const inlineAssets = dispatch.templateId
+      ? await listTemplateInlineAssetsForDispatch(
+          dependencies.pgPool,
+          dispatch.templateId,
+        )
+      : [];
+
+    assertTemplateCidReferences({
+      htmlContent: dispatch.htmlContent,
+      availableCids: inlineAssets
+        .map((asset) => asset.cid)
+        .filter((cid): cid is string => Boolean(cid)),
+      dispatchId: input.dispatchId,
+    });
+
+    const regularAttachments = dispatch.templateId
+      ? await listTemplateAttachmentsForDispatch(
+          dependencies.pgPool,
+          dispatch.templateId,
+        )
+      : [];
+
     const senderConfig = buildSmtpSenderMailConfig(sender);
 
     const result = await sendEmail(
@@ -74,6 +142,10 @@ export async function processEmailDispatch(
         subject: dispatch.subject,
         text: dispatch.textContent ?? systemConfig.mail.fallbackText,
         ...(dispatch.htmlContent ? { html: dispatch.htmlContent } : {}),
+        attachments: [
+          ...inlineAssets.map(mapInlineAssetToAttachment),
+          ...regularAttachments.map(mapRegularFileToAttachment),
+        ],
       },
       senderConfig,
     );

@@ -8,3 +8,5 @@ export * from "./template/template-variable.js";
 export * from "./template/template-variable-mapping.js";
 export * from "./domain/domain-reference.js";
 export * from "./campaign/campaign-status-rules.js";
+export * from "./email-file/email-file-kind.js";
+export * from "./email-file/cid-reference.js";

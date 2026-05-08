@@ -4,11 +4,20 @@ import {
   type MailTransportConfig,
 } from "./create-mail-transporter.js";
 
+export type SendEmailAttachmentInput = {
+  filename: string;
+  path: string;
+  contentType?: string | undefined;
+  cid?: string | undefined;
+  contentDisposition?: "inline" | "attachment" | undefined;
+};
+
 export type SendEmailInput = {
   to: string;
   subject: string;
   text?: string | undefined;
   html?: string | undefined;
+  attachments?: SendEmailAttachmentInput[] | undefined;
 };
 
 export type SendEmailSenderConfig = MailTransportConfig & {
@@ -17,10 +26,41 @@ export type SendEmailSenderConfig = MailTransportConfig & {
   replyToEmail?: string | null | undefined;
 };
 
+type NodemailerAttachment = {
+  filename: string;
+  path: string;
+  contentType?: string | undefined;
+  cid?: string | undefined;
+  contentDisposition?: "inline" | "attachment" | undefined;
+};
+
 function buildFrom(input: { fromName: string; fromEmail: string }): string {
   const safeFromName = input.fromName.replaceAll('"', "");
 
   return `"${safeFromName}" <${input.fromEmail}>`;
+}
+
+function mapAttachment(
+  attachment: SendEmailAttachmentInput,
+): NodemailerAttachment {
+  const result: NodemailerAttachment = {
+    filename: attachment.filename,
+    path: attachment.path,
+  };
+
+  if (attachment.contentType) {
+    result.contentType = attachment.contentType;
+  }
+
+  if (attachment.cid) {
+    result.cid = attachment.cid;
+  }
+
+  if (attachment.contentDisposition) {
+    result.contentDisposition = attachment.contentDisposition;
+  }
+
+  return result;
 }
 
 export async function sendEmail(
@@ -44,6 +84,7 @@ export async function sendEmail(
     subject: input.subject,
     text: input.text,
     html: input.html,
+    attachments: input.attachments?.map(mapAttachment),
   });
 
   return {

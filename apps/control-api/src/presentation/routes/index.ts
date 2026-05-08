@@ -12,6 +12,7 @@ import { registerEmailDispatchesRoute } from "./email-dispatches-route.js";
 import { registerDomainsRoute } from "./domains-route.js";
 import { registerHealthRoute } from "./health-route.js";
 import { registerTemplatesRoute } from "./templates-route.js";
+import { registerTemplateFilesRoute } from "./template-files-route.js";
 import { registerSmtpSendersRoute } from "./smtp-senders-route.js";
 
 type RegisterRoutesDependencies = {
@@ -49,6 +50,10 @@ export function registerRoutes(
   });
 
   registerTemplatesRoute(app, {
+    pgPool: dependencies.pgPool,
+  });
+
+  registerTemplateFilesRoute(app, {
     pgPool: dependencies.pgPool,
   });
 

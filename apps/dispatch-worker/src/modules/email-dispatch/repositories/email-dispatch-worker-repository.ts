@@ -6,11 +6,20 @@ export type RawEmailDispatchRow = {
   id: string;
   campaignId: string;
   contactId: string;
+  templateId: string | null;
   smtpSenderId: string | null;
   recipientEmail: string;
   subject: string;
   htmlContent: string | null;
   textContent: string | null;
+};
+
+export type RawDispatchEmailFileRow = {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  storageKey: string;
+  cid: string | null;
 };
 
 export async function findEmailDispatchById(
@@ -23,6 +32,7 @@ export async function findEmailDispatchById(
         id,
         campaign_id AS "campaignId",
         contact_id AS "contactId",
+        template_id AS "templateId",
         smtp_sender_id AS "smtpSenderId",
         recipient_email AS "recipientEmail",
         subject,
@@ -36,6 +46,52 @@ export async function findEmailDispatchById(
   );
 
   return result.rows[0] ?? null;
+}
+
+export async function listTemplateInlineAssetsForDispatch(
+  pgPool: Pool,
+  templateId: string,
+): Promise<RawDispatchEmailFileRow[]> {
+  const result = await pgPool.query<RawDispatchEmailFileRow>(
+    `
+      SELECT
+        id,
+        original_name AS "originalName",
+        mime_type AS "mimeType",
+        storage_key AS "storageKey",
+        cid
+      FROM email_files
+      WHERE template_id = $1
+        AND kind = 'template_inline_asset'
+      ORDER BY created_at ASC
+    `,
+    [templateId],
+  );
+
+  return result.rows;
+}
+
+export async function listTemplateAttachmentsForDispatch(
+  pgPool: Pool,
+  templateId: string,
+): Promise<RawDispatchEmailFileRow[]> {
+  const result = await pgPool.query<RawDispatchEmailFileRow>(
+    `
+      SELECT
+        id,
+        original_name AS "originalName",
+        mime_type AS "mimeType",
+        storage_key AS "storageKey",
+        cid
+      FROM email_files
+      WHERE template_id = $1
+        AND kind = 'template_attachment'
+      ORDER BY created_at ASC
+    `,
+    [templateId],
+  );
+
+  return result.rows;
 }
 
 export async function markEmailDispatchProcessing(

@@ -83,25 +83,6 @@ Exemplos:
 - `refactor/control-api-repositories`
 - `docs/local-development`
 
-## Commits
-
-Atualmente, o projeto ainda não adota formalmente uma convenção obrigatória de commits.
-
-No entanto, a partir da primeira release, a recomendação é passar a utilizar um padrão inspirado em Conventional Commits, para melhorar a organização do histórico, a legibilidade das mudanças e a evolução do projeto.
-
-Formato recomendado:
-
-```text
-(<escopo>): <descrição>
-```
-
-Exemplos:
-
-- `(control-api): adicionada listagem de dispatches com filtros básicos`
-- `(infra): ajustada porta do PostgreSQL dockerizado para coexistência com instância local`
-- `(shared): centralizada leitura da configuração do sistema`
-- `(control-api): detalhados endpoints da API`
-
 ## Pull requests
 
 Ao abrir um pull request, procure:

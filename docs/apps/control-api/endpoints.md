@@ -667,3 +667,41 @@ GET /domains/cnpj-api/cities?page=1&limit=20&q=londrina
   ]
 }
 ```
+
+---
+
+## Template files
+
+### `POST /templates/:templateId/inline-assets`
+
+Cadastra os metadados de um asset inline usado no HTML do template via `cid:`.
+
+### `GET /templates/:templateId/inline-assets`
+
+Lista assets inline vinculados ao template.
+
+### `GET /templates/:templateId/inline-assets/:fileId`
+
+Consulta um asset inline vinculado ao template.
+
+### `DELETE /templates/:templateId/inline-assets/:fileId`
+
+Remove um asset inline vinculado ao template.
+
+### `POST /templates/:templateId/attachments`
+
+Cadastra um anexo comum do template, enviado como attachment normal nos disparos que usam esse template.
+
+### `GET /templates/:templateId/attachments`
+
+Lista anexos comuns vinculados ao template.
+
+### `GET /templates/:templateId/attachments/:fileId`
+
+Consulta um anexo comum vinculado ao template.
+
+### `DELETE /templates/:templateId/attachments/:fileId`
+
+Remove um anexo comum vinculado ao template.
+
+> Campanhas não possuem arquivos próprios neste modelo. A campanha apenas referencia o template, e o template concentra HTML, CIDs e anexos comuns.
